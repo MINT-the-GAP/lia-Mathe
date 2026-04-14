@@ -1,6 +1,6 @@
 // FQStore: manages all widget state, DOM binding, rendering, and quiz bridge logic.
 
-import { FQMeta, FQNodes, FQFraction, FQRectDims } from "./types";
+import { FQKind, FQMeta, FQNodes, FQFraction, FQRectDims, FQPublicAPI } from "./types";
 import { MAX_CIRCLE_PARTS, MAX_RECT_DIM, DEBUG_FQ } from "./constants";
 import { parseFraction, boolArray, bestFactorPair, clampInt } from "./fraction";
 import { renderCircleSVG, renderRectSVG } from "./renderer";
@@ -66,7 +66,7 @@ export function installDebugDomObserver(root: Window & typeof globalThis, key: s
   debug("debug-dom-observer-installed");
 }
 
-export class FQStore {
+export class FQStore implements FQPublicAPI {
   private circle: Record<string, boolean[]> = Object.create(null);
   private rect: Record<string, boolean[]> = Object.create(null);
   private rectDims: Record<string, FQRectDims> = Object.create(null);
@@ -75,12 +75,12 @@ export class FQStore {
 
   readonly version = 3;
 
-  getMeta(uid: string, kind?: string): FQMeta {
+  getMeta(uid: string, kind?: FQKind | ""): FQMeta {
     uid = String(uid == null ? "" : uid);
     if (!this.meta[uid]) {
       this.meta[uid] = {
         uid,
-        kind: (kind || "") as FQMeta["kind"],
+        kind: (kind || "") as FQKind | "",
         target: { num: 0, den: 1, value: 0, raw: "0" },
         locked: false,
         solved: false,
@@ -88,7 +88,7 @@ export class FQStore {
         ready: false
       };
     }
-    if (kind) this.meta[uid].kind = kind as FQMeta["kind"];
+    if (kind) this.meta[uid].kind = kind as FQKind;
     return this.meta[uid];
   }
 
@@ -174,7 +174,7 @@ export class FQStore {
     return parseFraction(raw);
   }
 
-  setTarget(uid: string, raw: unknown, kind?: string): FQFraction {
+  setTarget(uid: string, raw: unknown, kind?: FQKind | ""): FQFraction {
     const meta = this.getMeta(uid, kind);
     meta.target = parseFraction(raw);
     debug("setTarget", uid, { kind: meta.kind, target: meta.target });
@@ -354,7 +354,7 @@ export class FQStore {
   }
 
   register(uid: string, options: {
-    kind?: string;
+    kind?: FQKind | "";
     wrap?: HTMLElement | null;
     host?: HTMLElement | null;
     mount?: HTMLElement | null;
@@ -367,7 +367,7 @@ export class FQStore {
     initialCols?: unknown;
   }): FQNodes {
     const opts = options || {};
-    const kind = opts.kind || "";
+    const kind = (opts.kind || "") as FQKind | "";
     const meta = this.getMeta(uid, kind);
     const nodes = this.getNodes(uid);
 
