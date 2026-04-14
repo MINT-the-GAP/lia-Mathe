@@ -1,9 +1,9 @@
 <!--
 author:   MINT-the-GAP
 version:  0.0.1
-language: de
+language: en
 edit: true
-narrator: Deutsch Female
+narrator: US English Female
 comment:  Interactive fraction quizzes with circle and rectangle visualizations. Students set the division and mark the correct fraction using sliders.
 
 script:   ./dist/index.js
@@ -60,7 +60,7 @@ if (_api) _api.mountRect("@0", String.raw`@1`);
 
 -->
 
-# Fraction Quiz — LiaScript Plugin
+# Fraction Quiz
 
           --{{0}}--
 Interactive fraction quizzes with circle and rectangle visualizations.

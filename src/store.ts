@@ -579,11 +579,11 @@ export class FQStore implements FQPublicAPI {
   }
 
   private looksRevealed(scope: Element): boolean {
-    if (!scope || !scope.querySelector) return false;
-    try {
-      if (scope.querySelector('[data-state="resolved"], [data-revealed="true"], [data-state="revealed"]')) return true;
-    } catch (e) {}
-    const feedback = scope.querySelector(".lia-quiz__feedback, [class*='feedback']");
+    if (!scope) return false;
+    // LiaScript sets class "resolved" on the .lia-quiz wrapper when the solution is revealed
+    if (scope.classList.contains("resolved")) return true;
+    // Fallback: text-sniff the feedback element
+    const feedback = scope.querySelector(".lia-quiz__feedback");
     const text = ((feedback && feedback.textContent) || "").toLowerCase();
     return /(aufgel|aufl[oö]s|l[oö]sung|show solution|resolved|solution)/i.test(text);
   }
@@ -625,18 +625,12 @@ export class FQStore implements FQPublicAPI {
         }
       });
       try {
-        // Observe only relevant attributes on the scope element itself (not subtree)
-        obs.observe(scope, { 
-          attributes: true, 
-          attributeFilter: ['data-state', 'data-revealed'], 
-          subtree: false 
+        // LiaScript mutates the class attribute on the .lia-quiz wrapper to add "resolved"
+        obs.observe(scope, {
+          attributes: true,
+          attributeFilter: ['class'],
+          subtree: false,
         });
-        
-        // Additionally observe childList changes only on the feedback element if it exists
-        const feedback = scope.querySelector(".lia-quiz__feedback, [class*='feedback']");
-        if (feedback) {
-          obs.observe(feedback, { childList: true, subtree: false, characterData: true });
-        }
       } catch (e) {
         obs = null;
       }
