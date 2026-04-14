@@ -1,6 +1,6 @@
 // FQStore: manages all widget state, DOM binding, rendering, and quiz bridge logic.
 
-import { FQKind, FQMeta, FQNodes, FQFraction, FQRectDims, FQPublicAPI } from "./types";
+import { FQKind, FQMeta, FQNodes, FQFraction, FQWidget, FQPublicAPI } from "./types";
 import { MAX_CIRCLE_PARTS, MAX_RECT_DIM, DEBUG_FQ } from "./constants";
 import { parseFraction, boolArray, bestFactorPair, clampInt } from "./fraction";
 import { renderCircleSVG, renderRectSVG } from "./renderer";
@@ -67,55 +67,54 @@ export function installDebugDomObserver(root: Window & typeof globalThis, key: s
 }
 
 export class FQStore implements FQPublicAPI {
-  private circle: Record<string, boolean[]> = Object.create(null);
-  private rect: Record<string, boolean[]> = Object.create(null);
-  private rectDims: Record<string, FQRectDims> = Object.create(null);
-  private meta: Record<string, FQMeta> = Object.create(null);
-  private nodes: Record<string, FQNodes> = Object.create(null);
+  private widgets: Record<string, FQWidget> = Object.create(null);
 
   readonly version = 3;
 
-  getMeta(uid: string, kind?: FQKind | ""): FQMeta {
+  // Returns the widget for uid, creating it lazily if it doesn't exist yet.
+  getWidget(uid: string, kind?: FQKind | ""): FQWidget {
     uid = String(uid == null ? "" : uid);
-    if (!this.meta[uid]) {
-      this.meta[uid] = {
-        uid,
-        kind: (kind || "") as FQKind | "",
-        target: { num: 0, den: 1, value: 0, raw: "0" },
-        locked: false,
-        solved: false,
-        revealed: false,
-        ready: false
+    if (!this.widgets[uid]) {
+      this.widgets[uid] = {
+        meta: {
+          uid,
+          kind: (kind || "") as FQKind | "",
+          target: { num: 0, den: 1, value: 0, raw: "0" },
+          locked: false,
+          solved: false,
+          revealed: false,
+          ready: false
+        },
+        nodes: {
+          uid,
+          kind: "",
+          wrap: null,
+          host: null,
+          mount: null,
+          circleInput: null,
+          rowsInput: null,
+          colsInput: null,
+          observer: null,
+          _quizScope: null,
+          _quizClickHandler: null,
+          _quizBridgeInstalled: false
+        },
+        state: []
       };
     }
-    if (kind) this.meta[uid].kind = kind as FQKind;
-    return this.meta[uid];
+    if (kind) this.widgets[uid].meta.kind = kind as FQKind;
+    return this.widgets[uid];
   }
 
-  getNodes(uid: string): FQNodes {
-    uid = String(uid == null ? "" : uid);
-    if (!this.nodes[uid]) {
-      this.nodes[uid] = {
-        uid,
-        kind: "",
-        wrap: null,
-        host: null,
-        mount: null,
-        circleInput: null,
-        rowsInput: null,
-        colsInput: null,
-        observer: null,
-        _quizScope: null,
-        _quizClickHandler: null,
-        _quizBridgeInstalled: false
-      };
-    }
-    return this.nodes[uid];
-  }
+  // Convenience accessors — kept for internal clarity.
+  private meta(uid: string): FQMeta { return this.getWidget(uid).meta; }
+  private nodes(uid: string): FQNodes { return this.getWidget(uid).nodes; }
+  private state(uid: string): boolean[] { return this.getWidget(uid).state; }
 
   refreshNodes(uid: string): FQNodes {
     uid = String(uid == null ? "" : uid);
-    const nodes = this.getNodes(uid);
+    const w = this.getWidget(uid);
+    const nodes = w.nodes;
 
     const prevWrap = nodes.wrap;
     const prevHost = nodes.host;
@@ -175,49 +174,48 @@ export class FQStore implements FQPublicAPI {
   }
 
   setTarget(uid: string, raw: unknown, kind?: FQKind | ""): FQFraction {
-    const meta = this.getMeta(uid, kind);
+    const meta = this.getWidget(uid, kind).meta;
     meta.target = parseFraction(raw);
     debug("setTarget", uid, { kind: meta.kind, target: meta.target });
     return meta.target;
   }
 
   ensureCircle(uid: string, parts: unknown, options?: { preserve?: boolean }): boolean[] {
-    const opts = options || {};
-    const meta = this.getMeta(uid, "circle");
+    const w = this.getWidget(uid, "circle");
     const n = clampInt(parts, 1, MAX_CIRCLE_PARTS, 1);
-    const prev = Array.isArray(this.circle[uid]) ? this.circle[uid] : [];
-    this.circle[uid] = boolArray(n, opts.preserve ? prev : null);
-    meta.parts = n;
-    meta.kind = "circle";
-    return this.circle[uid];
+    const prev = w.state.length > 0 ? w.state : [];
+    w.state = boolArray(n, options?.preserve ? prev : null);
+    w.meta.parts = n;
+    w.meta.kind = "circle";
+    delete w.dims;
+    return w.state;
   }
 
   ensureRect(uid: string, rows: unknown, cols: unknown, options?: { preserve?: boolean }): boolean[] {
-    const opts = options || {};
-    const meta = this.getMeta(uid, "rect");
+    const w = this.getWidget(uid, "rect");
     const r = clampInt(rows, 1, MAX_RECT_DIM, 1);
     const c = clampInt(cols, 1, MAX_RECT_DIM, 1);
-    const prev = Array.isArray(this.rect[uid]) ? this.rect[uid] : [];
-    this.rectDims[uid] = { rows: r, cols: c };
-    this.rect[uid] = boolArray(r * c, opts.preserve ? prev : null);
-    meta.rows = r;
-    meta.cols = c;
-    meta.kind = "rect";
-    return this.rect[uid];
+    const prev = w.state.length > 0 ? w.state : [];
+    w.dims = { rows: r, cols: c };
+    w.state = boolArray(r * c, options?.preserve ? prev : null);
+    w.meta.rows = r;
+    w.meta.cols = c;
+    w.meta.kind = "rect";
+    return w.state;
   }
 
   setCircleParts(uid: string, parts: unknown, options?: { force?: boolean; preserve?: boolean }): boolean[] {
-    const meta = this.getMeta(uid, "circle");
-    if (meta.locked && !(options && options.force)) {
-      return this.circle[uid] || this.ensureCircle(uid, 1);
+    const meta = this.getWidget(uid, "circle").meta;
+    if (meta.locked && !options?.force) {
+      return this.state(uid).length > 0 ? this.state(uid) : this.ensureCircle(uid, 1);
     }
     return this.ensureCircle(uid, parts, options);
   }
 
   setRectDims(uid: string, rows: unknown, cols: unknown, options?: { force?: boolean; preserve?: boolean }): boolean[] {
-    const meta = this.getMeta(uid, "rect");
-    if (meta.locked && !(options && options.force)) {
-      return this.rect[uid] || this.ensureRect(uid, 1, 1);
+    const meta = this.getWidget(uid, "rect").meta;
+    if (meta.locked && !options?.force) {
+      return this.state(uid).length > 0 ? this.state(uid) : this.ensureRect(uid, 1, 1);
     }
     return this.ensureRect(uid, rows, cols, options);
   }
@@ -241,70 +239,59 @@ export class FQStore implements FQPublicAPI {
   }
 
   getSolution(uid: string) {
-    const meta = this.getMeta(uid);
+    const meta = this.meta(uid);
     if (meta.kind === "circle") return this.buildCircleSolution(meta.target);
     if (meta.kind === "rect") return this.buildRectSolution(meta.target);
     return null;
   }
 
   isLocked(uid: string): boolean {
-    return !!this.getMeta(uid).locked;
+    return !!this.meta(uid).locked;
   }
 
-  toggleCircle(uid: string, index: number): boolean {
-    const meta = this.getMeta(uid, "circle");
+  // Unified toggle — replaces toggleCircle + toggleRect.
+  toggle(uid: string, index: number): boolean {
+    const w = this.getWidget(uid);
+    const { meta, state } = w;
     if (meta.locked || !meta.ready) return false;
-    const arr = Array.isArray(this.circle[uid]) ? this.circle[uid] : this.ensureCircle(uid, meta.parts || 1);
+    if (state.length === 0) {
+      if (meta.kind === "circle") this.ensureCircle(uid, meta.parts || 1);
+      else if (meta.kind === "rect") this.ensureRect(uid, w.dims?.rows || 1, w.dims?.cols || 1);
+    }
     const i = index | 0;
-    if (i < 0 || i >= arr.length) return false;
-    arr[i] = !arr[i];
-    return arr[i];
-  }
-
-  toggleRect(uid: string, index: number): boolean {
-    const meta = this.getMeta(uid, "rect");
-    if (meta.locked || !meta.ready) return false;
-    const dims = this.rectDims[uid] || { rows: meta.rows || 1, cols: meta.cols || 1 };
-    const arr = Array.isArray(this.rect[uid]) ? this.rect[uid] : this.ensureRect(uid, dims.rows, dims.cols);
-    const i = index | 0;
-    if (i < 0 || i >= arr.length) return false;
-    arr[i] = !arr[i];
-    return arr[i];
+    if (i < 0 || i >= w.state.length) return false;
+    w.state[i] = !w.state[i];
+    return w.state[i];
   }
 
   countSelected(uid: string): number {
-    const meta = this.getMeta(uid);
-    const arr = meta.kind === "rect" ? this.rect[uid] : this.circle[uid];
-    if (!Array.isArray(arr) || !arr.length) return 0;
+    const state = this.state(uid);
+    if (!state.length) return 0;
     let k = 0;
-    for (let i = 0; i < arr.length; i++) if (arr[i]) k++;
+    for (let i = 0; i < state.length; i++) if (state[i]) k++;
     return k;
   }
 
   countTotal(uid: string): number {
-    const meta = this.getMeta(uid);
-    const arr = meta.kind === "rect" ? this.rect[uid] : this.circle[uid];
-    return Array.isArray(arr) && arr.length ? arr.length : 1;
+    const state = this.state(uid);
+    return state.length || 1;
   }
 
   isCorrect(uid: string): boolean {
-    const meta = this.getMeta(uid);
+    const meta = this.meta(uid);
     if (!meta.ready) return false;
     const t = meta.target || { num: 0, den: 1 };
-    const total = this.countTotal(uid);
-    const selected = this.countSelected(uid);
-    return selected * t.den === t.num * total;
+    return this.countSelected(uid) * t.den === t.num * this.countTotal(uid);
   }
 
   lock(uid: string): boolean {
-    const meta = this.getMeta(uid);
-    meta.locked = true;
+    this.meta(uid).locked = true;
     this.syncDomState(uid);
     return true;
   }
 
   markSolved(uid: string): boolean {
-    const meta = this.getMeta(uid);
+    const meta = this.meta(uid);
     if (!meta.ready) return false;
     meta.solved = true;
     meta.revealed = false;
@@ -315,36 +302,35 @@ export class FQStore implements FQPublicAPI {
   }
 
   applySolution(uid: string) {
-    const meta = this.getMeta(uid);
+    const w = this.getWidget(uid);
     const sol = this.getSolution(uid);
     if (!sol) return null;
 
-    debug("applySolution:start", uid, { kind: meta.kind, solution: sol });
+    debug("applySolution:start", uid, { kind: w.meta.kind, solution: sol });
 
     if (sol.type === "circle") {
       this.setCircleParts(uid, sol.parts, { force: true, preserve: false });
-      this.circle[uid] = boolArray(sol.parts, sol.active);
-      meta.parts = sol.parts;
+      w.state = boolArray(sol.parts, sol.active);
+      w.meta.parts = sol.parts;
     } else {
       this.setRectDims(uid, sol.rows, sol.cols, { force: true, preserve: false });
-      this.rect[uid] = boolArray(sol.rows * sol.cols, sol.active);
-      this.rectDims[uid] = { rows: sol.rows, cols: sol.cols };
-      meta.rows = sol.rows;
-      meta.cols = sol.cols;
+      w.state = boolArray(sol.rows * sol.cols, sol.active);
+      w.dims = { rows: sol.rows, cols: sol.cols };
+      w.meta.rows = sol.rows;
+      w.meta.cols = sol.cols;
     }
 
     this.syncInputs(uid, true);
     this.render(uid);
 
-    debug("applySolution:end", uid, { kind: meta.kind });
+    debug("applySolution:end", uid, { kind: w.meta.kind });
     return sol;
   }
 
   markRevealed(uid: string): boolean {
-    const meta = this.getMeta(uid);
+    const meta = this.meta(uid);
     if (!meta.ready) return false;
     if (meta.revealed && meta.locked) return true;
-
     meta.revealed = true;
     meta.solved = false;
     meta.locked = true;
@@ -368,8 +354,8 @@ export class FQStore implements FQPublicAPI {
   }): FQNodes {
     const opts = options || {};
     const kind = (opts.kind || "") as FQKind | "";
-    const meta = this.getMeta(uid, kind);
-    const nodes = this.getNodes(uid);
+    const w = this.getWidget(uid, kind);
+    const { meta, nodes } = w;
 
     debug("register:start", uid, { kind });
 
@@ -384,19 +370,18 @@ export class FQStore implements FQPublicAPI {
     if (opts.target !== undefined) this.setTarget(uid, opts.target, kind || meta.kind);
 
     if (kind === "circle") {
-      const hasState = Array.isArray(this.circle[uid]) && this.circle[uid].length > 0;
+      const hasState = w.state.length > 0;
       if (!hasState) {
         this.ensureCircle(uid, opts.initialParts != null ? opts.initialParts : 1, { preserve: false });
       } else {
-        meta.parts = this.circle[uid].length;
+        meta.parts = w.state.length;
         meta.kind = "circle";
       }
     } else if (kind === "rect") {
-      const dims = this.rectDims[uid];
+      const dims = w.dims;
       const hasState =
         !!dims &&
-        Array.isArray(this.rect[uid]) &&
-        this.rect[uid].length === clampInt(dims.rows, 1, MAX_RECT_DIM, 1) * clampInt(dims.cols, 1, MAX_RECT_DIM, 1);
+        w.state.length === clampInt(dims.rows, 1, MAX_RECT_DIM, 1) * clampInt(dims.cols, 1, MAX_RECT_DIM, 1);
       if (!hasState) {
         this.ensureRect(uid, opts.initialRows != null ? opts.initialRows : 1, opts.initialCols != null ? opts.initialCols : 1, { preserve: false });
       } else {
@@ -419,11 +404,11 @@ export class FQStore implements FQPublicAPI {
   }
 
   attachCircle(uid: string, options: Parameters<FQStore["register"]>[1]): FQNodes {
-    return this.register(uid, Object.assign({}, options, { kind: "circle" }));
+    return this.register(uid, Object.assign({}, options, { kind: "circle" as FQKind }));
   }
 
   attachRect(uid: string, options: Parameters<FQStore["register"]>[1]): FQNodes {
-    return this.register(uid, Object.assign({}, options, { kind: "rect" }));
+    return this.register(uid, Object.assign({}, options, { kind: "rect" as FQKind }));
   }
 
   bindCircleInput(uid: string, input: HTMLInputElement): void {
@@ -448,7 +433,7 @@ export class FQStore implements FQPublicAPI {
       const handlerRows = () => {
         if (this.isLocked(uid)) { this.syncInputs(uid, true); return; }
         const rows = clampInt(rowsInput.value, 1, MAX_RECT_DIM, 1);
-        const cols = colsInput ? clampInt(colsInput.value, 1, MAX_RECT_DIM, 1) : ((this.rectDims[uid] && this.rectDims[uid].cols) || 1);
+        const cols = colsInput ? clampInt(colsInput.value, 1, MAX_RECT_DIM, 1) : (this.getWidget(uid).dims?.cols || 1);
         this.setRectDims(uid, rows, cols, { preserve: false });
         this.render(uid);
       };
@@ -463,7 +448,7 @@ export class FQStore implements FQPublicAPI {
       const handlerCols = () => {
         if (this.isLocked(uid)) { this.syncInputs(uid, true); return; }
         const cols = clampInt(colsInput.value, 1, MAX_RECT_DIM, 1);
-        const rows = rowsInput ? clampInt(rowsInput.value, 1, MAX_RECT_DIM, 1) : ((this.rectDims[uid] && this.rectDims[uid].rows) || 1);
+        const rows = rowsInput ? clampInt(rowsInput.value, 1, MAX_RECT_DIM, 1) : (this.getWidget(uid).dims?.rows || 1);
         this.setRectDims(uid, rows, cols, { preserve: false });
         this.render(uid);
       };
@@ -475,16 +460,17 @@ export class FQStore implements FQPublicAPI {
 
   syncInputs(uid: string, forceValue: boolean): void {
     const nodes = this.refreshNodes(uid);
-    const meta = this.getMeta(uid);
+    const w = this.getWidget(uid);
+    const { meta } = w;
 
     if (meta.kind === "circle" && nodes.circleInput) {
-      const parts = (this.circle[uid] && this.circle[uid].length) || meta.parts || 1;
+      const parts = w.state.length || meta.parts || 1;
       if (forceValue || String(nodes.circleInput.value) !== String(parts)) nodes.circleInput.value = String(parts);
       nodes.circleInput.disabled = !!meta.locked;
     }
 
     if (meta.kind === "rect") {
-      const dims = this.rectDims[uid] || { rows: meta.rows || 1, cols: meta.cols || 1 };
+      const dims = w.dims || { rows: meta.rows || 1, cols: meta.cols || 1 };
       if (nodes.rowsInput) {
         if (forceValue || String(nodes.rowsInput.value) !== String(dims.rows)) nodes.rowsInput.value = String(dims.rows);
         nodes.rowsInput.disabled = !!meta.locked;
@@ -498,7 +484,7 @@ export class FQStore implements FQPublicAPI {
 
   syncDomState(uid: string): void {
     const nodes = this.refreshNodes(uid);
-    const meta = this.getMeta(uid);
+    const meta = this.meta(uid);
     const targets = [nodes.wrap, nodes.host, nodes.mount];
 
     for (const el of targets) {
@@ -513,7 +499,7 @@ export class FQStore implements FQPublicAPI {
 
   render(uid: string): boolean {
     const nodes = this.refreshNodes(uid);
-    const meta = this.getMeta(uid);
+    const meta = this.meta(uid);
     if (!nodes.mount) return false;
 
     if (meta.kind === "circle") return this.renderCircle(uid, nodes.mount);
@@ -522,9 +508,9 @@ export class FQStore implements FQPublicAPI {
   }
 
   private renderCircle(uid: string, mount: HTMLElement): boolean {
-    const meta = this.getMeta(uid, "circle");
-    const arr = Array.isArray(this.circle[uid]) ? this.circle[uid] : this.ensureCircle(uid, meta.parts || 1);
-    const locked = !!meta.locked;
+    const w = this.getWidget(uid, "circle");
+    const arr = w.state.length > 0 ? w.state : this.ensureCircle(uid, w.meta.parts || 1);
+    const locked = !!w.meta.locked;
 
     mount.innerHTML = renderCircleSVG(arr);
 
@@ -533,7 +519,7 @@ export class FQStore implements FQPublicAPI {
       if (!el || locked) return;
       const i = parseInt(el.getAttribute("data-fq-part") || "", 10);
       if (!Number.isFinite(i)) return;
-      this.toggleCircle(uid, i);
+      this.toggle(uid, i);
       this.render(uid);
     };
 
@@ -542,12 +528,12 @@ export class FQStore implements FQPublicAPI {
   }
 
   private renderRect(uid: string, mount: HTMLElement): boolean {
-    const meta = this.getMeta(uid, "rect");
-    const dims = this.rectDims[uid] || { rows: meta.rows || 1, cols: meta.cols || 1 };
-    const arr = Array.isArray(this.rect[uid]) ? this.rect[uid] : this.ensureRect(uid, dims.rows, dims.cols);
+    const w = this.getWidget(uid, "rect");
+    const dims = w.dims || { rows: w.meta.rows || 1, cols: w.meta.cols || 1 };
+    const arr = w.state.length > 0 ? w.state : this.ensureRect(uid, dims.rows, dims.cols);
     const rows = clampInt(dims.rows, 1, MAX_RECT_DIM, 1);
     const cols = clampInt(dims.cols, 1, MAX_RECT_DIM, 1);
-    const locked = !!meta.locked;
+    const locked = !!w.meta.locked;
 
     mount.innerHTML = renderRectSVG(arr, rows, cols);
 
@@ -556,7 +542,7 @@ export class FQStore implements FQPublicAPI {
       if (!el || locked) return;
       const i = parseInt(el.getAttribute("data-fq-part") || "", 10);
       if (!Number.isFinite(i)) return;
-      this.toggleRect(uid, i);
+      this.toggle(uid, i);
       this.render(uid);
     };
 
@@ -580,8 +566,7 @@ export class FQStore implements FQPublicAPI {
   }
 
   private isRevealButton(el: Element | null): boolean {
-    const s = this.labelOf(el);
-    return /(aufl|aufl[oö]sen|l[oö]sung|show solution|solution|resolve)/i.test(s);
+    return /(aufl|aufl[oö]sen|l[oö]sung|show solution|solution|resolve)/i.test(this.labelOf(el));
   }
 
   private looksRevealed(scope: Element): boolean {
@@ -595,8 +580,8 @@ export class FQStore implements FQPublicAPI {
   }
 
   ensureQuizBridge(uid: string, scope: HTMLElement): void {
-    const nodes = this.getNodes(uid);
-    const meta = this.getMeta(uid);
+    const nodes = this.nodes(uid);
+    const meta = this.meta(uid);
 
     if (!scope) return;
     if (nodes._quizBridgeInstalled && nodes._quizScope === scope && scope.isConnected) return;
@@ -614,9 +599,7 @@ export class FQStore implements FQPublicAPI {
       const btn = evt.target && (evt.target as Element).closest
         ? (evt.target as Element).closest("button, input[type='button'], input[type='submit']")
         : null;
-      if (!btn) return;
-      if (!this.isRevealButton(btn)) return;
-      if (!meta.ready) return;
+      if (!btn || !this.isRevealButton(btn) || !meta.ready) return;
       debug("quiz-reveal-click", uid, { label: this.labelOf(btn) });
       setTimeout(() => { this.markRevealed(uid); }, 0);
     };
