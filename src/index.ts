@@ -3,6 +3,7 @@
 import { STORE_KEY, DEBUG_OBSERVER_KEY } from "./constants";
 import { injectStyleOnce } from "./style";
 import { FQStore, installDebugDomObserver } from "./store";
+import { FQPublicAPI } from "./types";
 
 function getRootWindow(): Window & typeof globalThis {
   let w: any = window;
@@ -25,9 +26,31 @@ const ROOT = getRootWindow();
 injectStyleOnce(getDoc());
 installDebugDomObserver(ROOT, DEBUG_OBSERVER_KEY);
 
+// Create the singleton store if it doesn't exist
 if (!(ROOT as any)[STORE_KEY]) {
   (ROOT as any)[STORE_KEY] = new FQStore();
 }
 
-(ROOT as any).__LIA_FRACTION_QUIZ__ = (ROOT as any)[STORE_KEY];
-(window as any).__LIA_FRACTION_QUIZ__ = (ROOT as any)[STORE_KEY];
+// Get the internal store instance
+const store: FQStore = (ROOT as any)[STORE_KEY];
+
+// Expose only the public API (FQPublicAPI) on the root window
+const publicAPI: FQPublicAPI = {
+  mountCircle: (uid: string, target: string) => store.mountCircle(uid, target),
+  mountRect: (uid: string, target: string) => store.mountRect(uid, target),
+  check: (uid: string) => store.check(uid),
+  onReveal: (uid: string) => store.onReveal(uid),
+  destroy: () => {
+    // Destroy the store (disconnect all widget observers)
+    store.destroy();
+    
+    // Disconnect the debug observer if it exists
+    const debugObs = (ROOT as any)[DEBUG_OBSERVER_KEY];
+    if (debugObs && typeof debugObs.disconnect === 'function') {
+      try { debugObs.disconnect(); } catch (e) {}
+      (ROOT as any)[DEBUG_OBSERVER_KEY] = null;
+    }
+  }
+};
+
+(ROOT as any).__LIA_FRACTION_QUIZ__ = publicAPI;

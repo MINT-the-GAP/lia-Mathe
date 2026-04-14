@@ -54,4 +54,5 @@ export interface FQPublicAPI {
   mountRect(uid: string, target: string): void;
   check(uid: string): boolean;
   onReveal(uid: string): boolean;
+  destroy(): void;
 }

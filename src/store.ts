@@ -690,4 +690,15 @@ export class FQStore implements FQPublicAPI {
   // Public API wrappers — delegate to the unified mount.
   mountCircle(uid: string, target: string): void { this.mount(uid, "circle", target); }
   mountRect(uid: string, target: string): void { this.mount(uid, "rect", target); }
+
+  destroy(): void {
+    // Disconnect all widget observers
+    for (const uid in this.widgets) {
+      const nodes = this.widgets[uid].nodes;
+      if (nodes.observer) {
+        try { nodes.observer.disconnect(); } catch (e) {}
+        nodes.observer = null;
+      }
+    }
+  }
 }
