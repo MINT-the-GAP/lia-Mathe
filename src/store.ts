@@ -111,6 +111,20 @@ export class FQStore implements FQPublicAPI {
   private nodes(uid: string): FQNodes { return this.getWidget(uid).nodes; }
   private state(uid: string): boolean[] { return this.getWidget(uid).state; }
 
+  // Resolves rect dims from widget state, falling back to meta values.
+  private getDims(uid: string) {
+    const w = this.getWidget(uid);
+    return w.dims || { rows: w.meta.rows || 1, cols: w.meta.cols || 1 };
+  }
+
+  // Attaches input+change listeners to a range input without duplicating the guard.
+  private bindRangeInput(input: HTMLInputElement, boundKey: string, uid: string, handler: () => void): void {
+    if ((input as any)[boundKey] === uid) return;
+    (input as any)[boundKey] = uid;
+    input.addEventListener("input", handler, true);
+    input.addEventListener("change", handler, true);
+  }
+
   refreshNodes(uid: string): FQNodes {
     uid = String(uid == null ? "" : uid);
     const w = this.getWidget(uid);
@@ -204,19 +218,16 @@ export class FQStore implements FQPublicAPI {
     return w.state;
   }
 
+  // Unified locked-guard + delegate for both circle and rect dimension changes.
   setCircleParts(uid: string, parts: unknown, options?: { force?: boolean; preserve?: boolean }): boolean[] {
     const meta = this.getWidget(uid, "circle").meta;
-    if (meta.locked && !options?.force) {
-      return this.state(uid).length > 0 ? this.state(uid) : this.ensureCircle(uid, 1);
-    }
+    if (meta.locked && !options?.force) return this.state(uid).length > 0 ? this.state(uid) : this.ensureCircle(uid, 1);
     return this.ensureCircle(uid, parts, options);
   }
 
   setRectDims(uid: string, rows: unknown, cols: unknown, options?: { force?: boolean; preserve?: boolean }): boolean[] {
     const meta = this.getWidget(uid, "rect").meta;
-    if (meta.locked && !options?.force) {
-      return this.state(uid).length > 0 ? this.state(uid) : this.ensureRect(uid, 1, 1);
-    }
+    if (meta.locked && !options?.force) return this.state(uid).length > 0 ? this.state(uid) : this.ensureRect(uid, 1, 1);
     return this.ensureRect(uid, rows, cols, options);
   }
 
@@ -403,58 +414,32 @@ export class FQStore implements FQPublicAPI {
     return nodes;
   }
 
-  attachCircle(uid: string, options: Parameters<FQStore["register"]>[1]): FQNodes {
-    return this.register(uid, Object.assign({}, options, { kind: "circle" as FQKind }));
-  }
-
-  attachRect(uid: string, options: Parameters<FQStore["register"]>[1]): FQNodes {
-    return this.register(uid, Object.assign({}, options, { kind: "rect" as FQKind }));
-  }
-
   bindCircleInput(uid: string, input: HTMLInputElement): void {
-    if ((input as any).__fqCircleBoundUid === uid) return;
-    (input as any).__fqCircleBoundUid = uid;
-
-    const handler = () => {
+    this.bindRangeInput(input, "__fqCircleBoundUid", uid, () => {
       if (this.isLocked(uid)) { this.syncInputs(uid, true); return; }
-      const value = clampInt(input.value, 1, MAX_CIRCLE_PARTS, 1);
-      this.setCircleParts(uid, value, { preserve: false });
+      this.setCircleParts(uid, clampInt(input.value, 1, MAX_CIRCLE_PARTS, 1), { preserve: false });
       this.render(uid);
-    };
-
-    input.addEventListener("input", handler, true);
-    input.addEventListener("change", handler, true);
+    });
   }
 
   bindRectInputs(uid: string, rowsInput: HTMLInputElement | null, colsInput: HTMLInputElement | null): void {
-    if (rowsInput && (rowsInput as any).__fqRectRowsBoundUid !== uid) {
-      (rowsInput as any).__fqRectRowsBoundUid = uid;
-
-      const handlerRows = () => {
+    if (rowsInput) {
+      this.bindRangeInput(rowsInput, "__fqRectRowsBoundUid", uid, () => {
         if (this.isLocked(uid)) { this.syncInputs(uid, true); return; }
         const rows = clampInt(rowsInput.value, 1, MAX_RECT_DIM, 1);
-        const cols = colsInput ? clampInt(colsInput.value, 1, MAX_RECT_DIM, 1) : (this.getWidget(uid).dims?.cols || 1);
+        const cols = colsInput ? clampInt(colsInput.value, 1, MAX_RECT_DIM, 1) : this.getDims(uid).cols;
         this.setRectDims(uid, rows, cols, { preserve: false });
         this.render(uid);
-      };
-
-      rowsInput.addEventListener("input", handlerRows, true);
-      rowsInput.addEventListener("change", handlerRows, true);
+      });
     }
-
-    if (colsInput && (colsInput as any).__fqRectColsBoundUid !== uid) {
-      (colsInput as any).__fqRectColsBoundUid = uid;
-
-      const handlerCols = () => {
+    if (colsInput) {
+      this.bindRangeInput(colsInput, "__fqRectColsBoundUid", uid, () => {
         if (this.isLocked(uid)) { this.syncInputs(uid, true); return; }
         const cols = clampInt(colsInput.value, 1, MAX_RECT_DIM, 1);
-        const rows = rowsInput ? clampInt(rowsInput.value, 1, MAX_RECT_DIM, 1) : (this.getWidget(uid).dims?.rows || 1);
+        const rows = rowsInput ? clampInt(rowsInput.value, 1, MAX_RECT_DIM, 1) : this.getDims(uid).rows;
         this.setRectDims(uid, rows, cols, { preserve: false });
         this.render(uid);
-      };
-
-      colsInput.addEventListener("input", handlerCols, true);
-      colsInput.addEventListener("change", handlerCols, true);
+      });
     }
   }
 
@@ -470,7 +455,7 @@ export class FQStore implements FQPublicAPI {
     }
 
     if (meta.kind === "rect") {
-      const dims = w.dims || { rows: meta.rows || 1, cols: meta.cols || 1 };
+      const dims = this.getDims(uid);
       if (nodes.rowsInput) {
         if (forceValue || String(nodes.rowsInput.value) !== String(dims.rows)) nodes.rowsInput.value = String(dims.rows);
         nodes.rowsInput.disabled = !!meta.locked;
@@ -529,7 +514,7 @@ export class FQStore implements FQPublicAPI {
 
   private renderRect(uid: string, mount: HTMLElement): boolean {
     const w = this.getWidget(uid, "rect");
-    const dims = w.dims || { rows: w.meta.rows || 1, cols: w.meta.cols || 1 };
+    const dims = this.getDims(uid);
     const arr = w.state.length > 0 ? w.state : this.ensureRect(uid, dims.rows, dims.cols);
     const rows = clampInt(dims.rows, 1, MAX_RECT_DIM, 1);
     const cols = clampInt(dims.cols, 1, MAX_RECT_DIM, 1);
@@ -644,19 +629,33 @@ export class FQStore implements FQPublicAPI {
     return true;
   }
 
-  mountCircle(uid: string, target: string): void {
+  // Single mount implementation — kind determines the DOM id prefix used to find elements.
+  mount(uid: string, kind: FQKind, target: string): void {
     uid = String(uid == null ? "" : uid);
+    const p = `fq-${kind}-`;
     let tries = 0;
     const tick = () => {
-      const wrap = document.getElementById("fq-circle-wrap-" + uid);
-      const host = document.getElementById("fq-circle-host-" + uid);
-      const mount = document.getElementById("fq-circle-mount-" + uid);
-      const rangeWrap = document.getElementById("fq-circle-range-" + uid);
-      const input = rangeWrap ? rangeWrap.querySelector<HTMLInputElement>('input[type="range"]') : null;
-      if (wrap && host && mount && rangeWrap && input) {
-        this.attachCircle(uid, { wrap, host, mount, circleInput: input, target, initialParts: input.value || 1 });
-        this.ensureQuizBridge(uid, wrap);
-        return;
+      const wrap  = document.getElementById(p + "wrap-"  + uid);
+      const host  = document.getElementById(p + "host-"  + uid);
+      const mount = document.getElementById(p + "mount-" + uid);
+      if (kind === "circle") {
+        const rangeWrap = document.getElementById(p + "range-" + uid);
+        const input = rangeWrap ? rangeWrap.querySelector<HTMLInputElement>('input[type="range"]') : null;
+        if (wrap && host && mount && input) {
+          this.register(uid, { kind, wrap, host, mount, circleInput: input, target, initialParts: input.value || 1 });
+          this.ensureQuizBridge(uid, wrap);
+          return;
+        }
+      } else {
+        const rowsWrap = document.getElementById(p + "rows-wrap-" + uid);
+        const colsWrap = document.getElementById(p + "cols-wrap-" + uid);
+        const rowsInput = rowsWrap ? rowsWrap.querySelector<HTMLInputElement>('input[type="range"]') : null;
+        const colsInput = colsWrap ? colsWrap.querySelector<HTMLInputElement>('input[type="range"]') : null;
+        if (wrap && host && mount && rowsInput && colsInput) {
+          this.register(uid, { kind, wrap, host, mount, rowsInput, colsInput, target, initialRows: rowsInput.value || 1, initialCols: colsInput.value || 1 });
+          this.ensureQuizBridge(uid, wrap);
+          return;
+        }
       }
       tries++;
       if (tries < 240) requestAnimationFrame(tick);
@@ -664,25 +663,7 @@ export class FQStore implements FQPublicAPI {
     tick();
   }
 
-  mountRect(uid: string, target: string): void {
-    uid = String(uid == null ? "" : uid);
-    let tries = 0;
-    const tick = () => {
-      const wrap = document.getElementById("fq-rect-wrap-" + uid);
-      const host = document.getElementById("fq-rect-host-" + uid);
-      const mount = document.getElementById("fq-rect-mount-" + uid);
-      const rowsWrap = document.getElementById("fq-rect-rows-wrap-" + uid);
-      const colsWrap = document.getElementById("fq-rect-cols-wrap-" + uid);
-      const rowsInput = rowsWrap ? rowsWrap.querySelector<HTMLInputElement>('input[type="range"]') : null;
-      const colsInput = colsWrap ? colsWrap.querySelector<HTMLInputElement>('input[type="range"]') : null;
-      if (wrap && host && mount && rowsWrap && colsWrap && rowsInput && colsInput) {
-        this.attachRect(uid, { wrap, host, mount, rowsInput, colsInput, target, initialRows: rowsInput.value || 1, initialCols: colsInput.value || 1 });
-        this.ensureQuizBridge(uid, wrap);
-        return;
-      }
-      tries++;
-      if (tries < 240) requestAnimationFrame(tick);
-    };
-    tick();
-  }
+  // Public API wrappers — delegate to the unified mount.
+  mountCircle(uid: string, target: string): void { this.mount(uid, "circle", target); }
+  mountRect(uid: string, target: string): void { this.mount(uid, "rect", target); }
 }
