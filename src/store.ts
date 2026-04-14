@@ -5,6 +5,9 @@ import { MAX_CIRCLE_PARTS, MAX_RECT_DIM, DEBUG_FQ } from "./constants";
 import { parseFraction, boolArray, bestFactorPair, clampInt } from "./fraction";
 import { renderCircleSVG, renderRectSVG } from "./renderer";
 
+// Key used to mark that a wrap element already has a delegated click handler installed.
+const CLICK_INSTALLED_KEY = "__fqClickInstalled";
+
 function debug(tag: string, ...rest: unknown[]): void {
   if (!DEBUG_FQ) return;
   try { console.log("[FQDBG]", tag, ...rest); } catch (e) {}
@@ -178,9 +181,49 @@ export class FQStore implements FQPublicAPI {
 
     if (nodes.circleInput) this.bindCircleInput(uid, nodes.circleInput);
     if (nodes.rowsInput || nodes.colsInput) this.bindRectInputs(uid, nodes.rowsInput, nodes.colsInput);
-    if (nodes.wrap) this.ensureQuizBridge(uid, nodes.wrap);
+    if (nodes.wrap) {
+      this.ensureQuizBridge(uid, nodes.wrap);
+      this.installClickDelegation(uid, nodes.wrap);
+    }
 
     return nodes;
+  }
+
+  // Attaches a single delegated click handler on wrap once — never re-attached on re-render.
+  private installClickDelegation(uid: string, wrap: HTMLElement): void {
+    if ((wrap as any)[CLICK_INSTALLED_KEY]) return;
+    (wrap as any)[CLICK_INSTALLED_KEY] = true;
+
+    wrap.addEventListener("click", (evt) => {
+      const w = this.getWidget(uid);
+      if (w.meta.locked) return;
+      const el = evt.target && (evt.target as Element).closest
+        ? (evt.target as Element).closest("[data-fq-part]")
+        : null;
+      if (!el) return;
+      const i = parseInt(el.getAttribute("data-fq-part") || "", 10);
+      if (!Number.isFinite(i)) return;
+      this.toggle(uid, i);
+      this.render(uid);
+    }, true);
+  }
+
+  // Watches the wrap for DOM mutations — re-queries node references when the widget is re-mounted.
+  private installDomObserver(uid: string, wrap: HTMLElement): void {
+    const nodes = this.nodes(uid);
+    if (nodes.observer) return; // already installed
+    if (typeof MutationObserver === "undefined") return;
+
+    const obs = new MutationObserver(() => {
+      this.refreshNodes(uid);
+      this.syncDomState(uid);
+      this.render(uid);
+    });
+
+    try {
+      obs.observe(wrap.parentElement || wrap, { childList: true, subtree: false });
+      nodes.observer = obs;
+    } catch (e) {}
   }
 
   parseTarget(raw: unknown): FQFraction {
@@ -404,6 +447,11 @@ export class FQStore implements FQPublicAPI {
 
     if (nodes.circleInput) this.bindCircleInput(uid, nodes.circleInput);
     if (nodes.rowsInput || nodes.colsInput) this.bindRectInputs(uid, nodes.rowsInput, nodes.colsInput);
+    if (nodes.wrap) {
+      this.installClickDelegation(uid, nodes.wrap);
+      this.installDomObserver(uid, nodes.wrap);
+      this.ensureQuizBridge(uid, nodes.wrap);
+    }
 
     meta.ready = true;
     this.syncInputs(uid, true);
@@ -444,7 +492,7 @@ export class FQStore implements FQPublicAPI {
   }
 
   syncInputs(uid: string, forceValue: boolean): void {
-    const nodes = this.refreshNodes(uid);
+    const nodes = this.nodes(uid);
     const w = this.getWidget(uid);
     const { meta } = w;
 
@@ -468,7 +516,7 @@ export class FQStore implements FQPublicAPI {
   }
 
   syncDomState(uid: string): void {
-    const nodes = this.refreshNodes(uid);
+    const nodes = this.nodes(uid);
     const meta = this.meta(uid);
     const targets = [nodes.wrap, nodes.host, nodes.mount];
 
@@ -483,7 +531,7 @@ export class FQStore implements FQPublicAPI {
   }
 
   render(uid: string): boolean {
-    const nodes = this.refreshNodes(uid);
+    const nodes = this.nodes(uid);
     const meta = this.meta(uid);
     if (!nodes.mount) return false;
 
@@ -495,19 +543,7 @@ export class FQStore implements FQPublicAPI {
   private renderCircle(uid: string, mount: HTMLElement): boolean {
     const w = this.getWidget(uid, "circle");
     const arr = w.state.length > 0 ? w.state : this.ensureCircle(uid, w.meta.parts || 1);
-    const locked = !!w.meta.locked;
-
-    mount.innerHTML = renderCircleSVG(arr);
-
-    mount.onclick = (evt) => {
-      const el = evt.target && (evt.target as Element).closest ? (evt.target as Element).closest("[data-fq-part]") : null;
-      if (!el || locked) return;
-      const i = parseInt(el.getAttribute("data-fq-part") || "", 10);
-      if (!Number.isFinite(i)) return;
-      this.toggle(uid, i);
-      this.render(uid);
-    };
-
+    renderCircleSVG(mount, arr);
     this.syncDomState(uid);
     return true;
   }
@@ -518,19 +554,7 @@ export class FQStore implements FQPublicAPI {
     const arr = w.state.length > 0 ? w.state : this.ensureRect(uid, dims.rows, dims.cols);
     const rows = clampInt(dims.rows, 1, MAX_RECT_DIM, 1);
     const cols = clampInt(dims.cols, 1, MAX_RECT_DIM, 1);
-    const locked = !!w.meta.locked;
-
-    mount.innerHTML = renderRectSVG(arr, rows, cols);
-
-    mount.onclick = (evt) => {
-      const el = evt.target && (evt.target as Element).closest ? (evt.target as Element).closest("[data-fq-part]") : null;
-      if (!el || locked) return;
-      const i = parseInt(el.getAttribute("data-fq-part") || "", 10);
-      if (!Number.isFinite(i)) return;
-      this.toggle(uid, i);
-      this.render(uid);
-    };
-
+    renderRectSVG(mount, arr, rows, cols);
     this.syncDomState(uid);
     return true;
   }
