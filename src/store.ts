@@ -625,7 +625,18 @@ export class FQStore implements FQPublicAPI {
         }
       });
       try {
-        obs.observe(scope, { subtree: true, childList: true, attributes: true, characterData: true });
+        // Observe only relevant attributes on the scope element itself (not subtree)
+        obs.observe(scope, { 
+          attributes: true, 
+          attributeFilter: ['data-state', 'data-revealed'], 
+          subtree: false 
+        });
+        
+        // Additionally observe childList changes only on the feedback element if it exists
+        const feedback = scope.querySelector(".lia-quiz__feedback, [class*='feedback']");
+        if (feedback) {
+          obs.observe(feedback, { childList: true, subtree: false, characterData: true });
+        }
       } catch (e) {
         obs = null;
       }
