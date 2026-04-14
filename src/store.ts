@@ -657,18 +657,20 @@ export class FQStore implements FQPublicAPI {
   mount(uid: string, kind: FQKind, target: string): void {
     uid = String(uid == null ? "" : uid);
     const p = `fq-${kind}-`;
-    let tries = 0;
-    const tick = () => {
+    
+    // Try to find and register elements immediately
+    const tryMount = (): boolean => {
       const wrap  = document.getElementById(p + "wrap-"  + uid);
       const host  = document.getElementById(p + "host-"  + uid);
       const mount = document.getElementById(p + "mount-" + uid);
+      
       if (kind === "circle") {
         const rangeWrap = document.getElementById(p + "range-" + uid);
         const input = rangeWrap ? rangeWrap.querySelector<HTMLInputElement>('input[type="range"]') : null;
         if (wrap && host && mount && input) {
           this.register(uid, { kind, wrap, host, mount, circleInput: input, target, initialParts: input.value || 1 });
           this.ensureQuizBridge(uid, wrap);
-          return;
+          return true;
         }
       } else {
         const rowsWrap = document.getElementById(p + "rows-wrap-" + uid);
@@ -678,13 +680,58 @@ export class FQStore implements FQPublicAPI {
         if (wrap && host && mount && rowsInput && colsInput) {
           this.register(uid, { kind, wrap, host, mount, rowsInput, colsInput, target, initialRows: rowsInput.value || 1, initialCols: colsInput.value || 1 });
           this.ensureQuizBridge(uid, wrap);
-          return;
+          return true;
         }
       }
-      tries++;
-      if (tries < 240) requestAnimationFrame(tick);
+      return false;
     };
-    tick();
+    
+    // First attempt — most elements are already in the DOM
+    if (tryMount()) return;
+    
+    // Elements not ready yet — use MutationObserver to detect when they appear
+    let observer: MutationObserver | null = null;
+    let fallbackTimer: number | null = null;
+    
+    const cleanup = () => {
+      if (observer) {
+        try { observer.disconnect(); } catch (e) {}
+        observer = null;
+      }
+      if (fallbackTimer !== null) {
+        clearTimeout(fallbackTimer);
+        fallbackTimer = null;
+      }
+    };
+    
+    if (typeof MutationObserver !== "undefined") {
+      observer = new MutationObserver(() => {
+        if (tryMount()) {
+          debug("mount-observer-success", uid, kind);
+          cleanup();
+        }
+      });
+      
+      // Observe document.body (or documentElement) for added nodes
+      const observeTarget = document.body || document.documentElement;
+      if (observeTarget) {
+        try {
+          observer.observe(observeTarget, { childList: true, subtree: true });
+        } catch (e) {
+          observer = null;
+        }
+      }
+    }
+    
+    // Fallback: single retry after 50ms if observer isn't available or elements still not found
+    fallbackTimer = setTimeout(() => {
+      if (tryMount()) {
+        debug("mount-fallback-success", uid, kind);
+      } else {
+        debug("mount-timeout", uid, kind, "elements not found");
+      }
+      cleanup();
+    }, 50) as unknown as number;
   }
 
   // Public API wrappers — delegate to the unified mount.
