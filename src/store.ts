@@ -13,6 +13,54 @@ function debug(tag: string, ...rest: unknown[]): void {
   try { console.log("[FQDBG]", tag, ...rest); } catch (e) {}
 }
 
+function detectUiLanguage(): string {
+  const langs: string[] = [];
+  try {
+    const root = (window as any);
+    const lia = root.LIA || root.lia;
+    if (lia) {
+      if (typeof lia.language === "string") langs.push(lia.language);
+      if (lia.settings && typeof lia.settings.language === "string") langs.push(lia.settings.language);
+      if (typeof lia.lang === "string") langs.push(lia.lang);
+    }
+  } catch (e) {}
+  try {
+    if (document.documentElement) langs.push(document.documentElement.lang || "");
+  } catch (e) {}
+  try {
+    if (navigator.languages) {
+      for (let i = 0; i < navigator.languages.length; i++) langs.push(navigator.languages[i] || "");
+    }
+    if (navigator.language) langs.push(navigator.language);
+  } catch (e) {}
+  for (const raw of langs) {
+    const base = raw.trim().toLowerCase().split("-")[0];
+    if (base) return base;
+  }
+  return "de";
+}
+
+interface FQLabels { subdivisions: string; rows: string; cols: string; }
+
+function getLabels(lang: string): FQLabels {
+  if (lang === "de") return { subdivisions: "Unterteilungen", rows: "Zeilen", cols: "Spalten" };
+  return { subdivisions: "Subdivisions", rows: "Rows", cols: "Columns" };
+}
+
+function localizeRangeLabels(uid: string, kind: string): void {
+  const labels = getLabels(detectUiLanguage());
+  if (kind === "circle") {
+    const range = document.getElementById("fq-circle-range-" + uid);
+    if (range) range.setAttribute("data-label", labels.subdivisions);
+  }
+  if (kind === "rect") {
+    const rowsWrap = document.getElementById("fq-rect-rows-wrap-" + uid);
+    const colsWrap = document.getElementById("fq-rect-cols-wrap-" + uid);
+    if (rowsWrap) rowsWrap.setAttribute("data-label", labels.rows);
+    if (colsWrap) colsWrap.setAttribute("data-label", labels.cols);
+  }
+}
+
 function nodeLabel(node: Node | null): string {
   if (!node) return "(null)";
   if (node.nodeType !== 1) return "(" + node.nodeName + ")";
@@ -181,6 +229,7 @@ export class FQStore implements FQPublicAPI {
 
     if (nodes.circleInput) this.bindCircleInput(uid, nodes.circleInput);
     if (nodes.rowsInput || nodes.colsInput) this.bindRectInputs(uid, nodes.rowsInput, nodes.colsInput);
+    localizeRangeLabels(uid, nodes.kind);
     if (nodes.wrap) {
       this.ensureQuizBridge(uid, nodes.wrap);
       this.installClickDelegation(uid, nodes.wrap);
@@ -447,6 +496,7 @@ export class FQStore implements FQPublicAPI {
 
     if (nodes.circleInput) this.bindCircleInput(uid, nodes.circleInput);
     if (nodes.rowsInput || nodes.colsInput) this.bindRectInputs(uid, nodes.rowsInput, nodes.colsInput);
+    localizeRangeLabels(uid, kind || nodes.kind);
     if (nodes.wrap) {
       this.installClickDelegation(uid, nodes.wrap);
       this.installDomObserver(uid, nodes.wrap);

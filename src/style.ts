@@ -10,9 +10,9 @@ export function injectStyleOnce(doc: Document): void {
   --fq-thumb: #1a1a1a;
   --fq-thumb-hover: #000;
   --fq-ring: rgba(255,255,255,.95);
-  --fq-mark: #f97316;
+  --fq-mark: orange;
   --fq-stroke: #1a1a1a;
-  --fq-fill: #ffffff;
+  --fq-fill: #999;
   --fq-disabled: .45;
   --fq-accent: #6366f1;
 
@@ -20,8 +20,8 @@ export function injectStyleOnce(doc: Document): void {
   --fq-h: 36px;
   --fq-track-h: 3px;
   --fq-thumb-sz: 14px;
-  --fq-label-size: 13px;
-  --fq-label-top: -16px;
+  --fq-label-size: 18px;
+  --fq-label-top: -7px;
   --fq-transition: 160ms cubic-bezier(.4,0,.2,1);
 }
 @media (prefers-color-scheme: dark) {
@@ -31,11 +31,16 @@ export function injectStyleOnce(doc: Document): void {
     --fq-thumb-hover: #fff;
     --fq-ring: rgba(20,20,20,.8);
     --fq-stroke: #e5e5e5;
-    --fq-fill: #1a1a1a;
+    --fq-fill: #999;
   }
 }
 
 .fq-widget { display: inline-block; }
+
+.fq-mount {
+  display: flex;
+  justify-content: center;
+}
 
 .fq-mount svg { display: block; }
 
@@ -80,13 +85,13 @@ export function injectStyleOnce(doc: Document): void {
   top: var(--fq-label-top);
   text-align: center;
   font-size: var(--fq-label-size);
-  font-weight: 500;
+  font-weight: 700;
   letter-spacing: .02em;
   line-height: 1;
-  opacity: .6;
+  opacity: 1;
   pointer-events: none;
   z-index: 2;
-  color: var(--fq-fill);
+  color:  #999;
   text-transform: capitalize;
 }
 
@@ -172,7 +177,8 @@ export function injectStyleOnce(doc: Document): void {
 .fq-range input[type="range"]::-moz-range-track {
   height: var(--fq-track-h);
   border-radius: 999px;
-  background: var(--fq-track);
+  background: var(--fq-track);  
+  border: 1.5px solid #aaa;
 }
 
 .fq-range input[type="range"]::-moz-range-thumb {

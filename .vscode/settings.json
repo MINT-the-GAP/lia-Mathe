@@ -1,0 +1,12 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd \"z:\\\\Drive\\\\BBF\\\\Projekte Martin\\\\Software\\\\MathematikMakros\\\\lia-Mathe\" ; node \"node_modules\\\\\\.bin\\\\parcel\" build src/index\\.ts --dist-dir dist --no-scope-hoist$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "/^cd \"z:\\\\Drive\\\\BBF\\\\Projekte Martin\\\\Software\\\\MathematikMakros\\\\lia-Mathe\" ; node \"node_modules\\\\parcel\\\\lib\\\\cli\\.js\" build src/index\\.ts --dist-dir dist --no-scope-hoist$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
