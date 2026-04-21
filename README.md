@@ -1,6 +1,6 @@
 <!--
 author:   MINT-the-GAP
-version:  0.0.1
+version:  0.0.2
 language: en
 edit: true
 narrator: US English Female
@@ -129,7 +129,7 @@ https://github.com/MINT-the-GAP/lia-Mathe
 
    or pin to a specific version:
 
-   `import: https://raw.githubusercontent.com/MINT-the-GAP/lia-Mathe/0.0.1/README.md`
+   `import: https://raw.githubusercontent.com/MINT-the-GAP/lia-Mathe/0.0.2/README.md`
 
 2. Copy the definitions into your project
 
@@ -177,7 +177,7 @@ and clicks the matching cells to represent the fraction.
 If you prefer not to use `import:`, copy the following block directly into the header of your LiaScript document.
 
 ``` markdown
-script:   https://cdn.jsdelivr.net/gh/MINT-the-GAP/lia-Mathe@0.0.1/dist/index.js
+script:   https://cdn.jsdelivr.net/gh/MINT-the-GAP/lia-Mathe@0.0.2/dist/index.js
 
 @circleQuiz: @circleQuiz_(@uid,@0)
 

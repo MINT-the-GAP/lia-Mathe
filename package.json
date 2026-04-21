@@ -1,6 +1,6 @@
 {
   "name": "lia-mathe",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "LiaScript plugin for interactive fraction quizzes with circle and rectangle visualizations",
   "scripts": {
     "build": "parcel build src/index.ts --dist-dir dist --no-scope-hoist"
