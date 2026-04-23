@@ -1,6 +1,6 @@
 // FQStore: manages all widget state, DOM binding, rendering, and quiz bridge logic.
 
-import { FQKind, FQMeta, FQNodes, FQFraction, FQWidget, FQPublicAPI } from "./types";
+import { FQKind, FQMeta, FQNodes, FQFraction, FQWidget, FQPublicAPI, FQWidgetSnapshot } from "./types";
 import { MAX_CIRCLE_PARTS, MAX_RECT_DIM, DEBUG_FQ } from "./constants";
 import { parseFraction, boolArray, bestFactorPair, clampInt } from "./fraction";
 import { renderCircleSVG, renderRectSVG } from "./renderer";
@@ -793,8 +793,26 @@ export class FQStore implements FQPublicAPI {
   mountCircle(uid: string, target: string): void { this.mount(uid, "circle", target); }
   mountRect(uid: string, target: string): void { this.mount(uid, "rect", target); }
 
+  getAllWidgets(): Record<string, FQWidgetSnapshot> {
+    const out: Record<string, FQWidgetSnapshot> = Object.create(null);
+    for (const uid in this.widgets) {
+      const w = this.widgets[uid];
+      out[uid] = {
+        state: w.state.slice(),
+        meta: {
+          uid: w.meta.uid,
+          kind: w.meta.kind,
+          solved: w.meta.solved,
+          revealed: w.meta.revealed,
+          locked: w.meta.locked,
+          ready: w.meta.ready,
+        },
+      };
+    }
+    return out;
+  }
+
   destroy(): void {
-    // Disconnect all widget observers
     for (const uid in this.widgets) {
       const nodes = this.widgets[uid].nodes;
       if (nodes.observer) {

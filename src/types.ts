@@ -49,10 +49,16 @@ export interface FQWidget {
   dims?: FQRectDims;
 }
 
+export interface FQWidgetSnapshot {
+  state: boolean[];
+  meta: Pick<FQMeta, "uid" | "kind" | "solved" | "revealed" | "locked" | "ready">;
+}
+
 export interface FQPublicAPI {
   mountCircle(uid: string, target: string): void;
   mountRect(uid: string, target: string): void;
   check(uid: string): boolean;
   onReveal(uid: string): boolean;
   destroy(): void;
+  getAllWidgets(): Record<string, FQWidgetSnapshot>;
 }

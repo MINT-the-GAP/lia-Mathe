@@ -40,11 +40,9 @@ const publicAPI: FQPublicAPI = {
   mountRect: (uid: string, target: string) => store.mountRect(uid, target),
   check: (uid: string) => store.check(uid),
   onReveal: (uid: string) => store.onReveal(uid),
+  getAllWidgets: () => store.getAllWidgets(),
   destroy: () => {
-    // Destroy the store (disconnect all widget observers)
     store.destroy();
-    
-    // Disconnect the debug observer if it exists
     const debugObs = (ROOT as any)[DEBUG_OBSERVER_KEY];
     if (debugObs && typeof debugObs.disconnect === 'function') {
       try { debugObs.disconnect(); } catch (e) {}
