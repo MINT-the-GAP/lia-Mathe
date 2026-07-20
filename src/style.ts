@@ -193,6 +193,28 @@ export function injectStyleOnce(doc: Document): void {
 
 .fq-range input[type="range"]:hover::-moz-range-thumb { transform: scale(1.18); }
 .fq-range input[type="range"]:active::-moz-range-thumb { transform: scale(1.08); }
+.lia-math-quiz-source[data-lia-math-quiz-mounted=true] {
+  display: none !important;
+}
+
+[data-lia-math-quiz-native] {
+  display: none !important;
+}
+
+.lia-math-quiz-proxy {
+  position: absolute !important;
+  z-index: 3;
+  box-sizing: border-box !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0.2rem 0.5rem;
+  text-align: center;
+  font-weight: inherit;
+  text-decoration: inherit;
+  font-style: inherit;
+  vertical-align: middle;
+}
   `.trim();
 
   const style = doc.createElement("style");

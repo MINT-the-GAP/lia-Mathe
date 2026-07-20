@@ -62,3 +62,8 @@ export interface FQPublicAPI {
   destroy(): void;
   getAllWidgets(): Record<string, FQWidgetSnapshot>;
 }
+
+export interface MathQuizPublicAPI {
+  refresh(): void;
+  destroy(): void;
+}

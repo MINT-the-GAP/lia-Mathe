@@ -1,4 +1,8 @@
-// Entry point: initialises style, debug observer, and the singleton FQStore on the root window.
+// Entry point: initialises styles and the fraction/math quiz bridges.
+
+import { MATH_QUIZ_KEY } from './constants';
+import { MathQuizBridge } from './mathQuiz';
+import { MathQuizPublicAPI } from './types';
 
 import { STORE_KEY, DEBUG_OBSERVER_KEY } from "./constants";
 import { injectStyleOnce } from "./style";
@@ -7,9 +11,16 @@ import { FQPublicAPI } from "./types";
 
 function getRootWindow(): Window & typeof globalThis {
   let w: any = window;
-  try {
-    while (w.parent && w.parent !== w) w = w.parent;
-  } catch (e) {}
+  while (true) {
+    try {
+      const parent = w.parent;
+      if (!parent || parent === w) break;
+      void parent.document;
+      w = parent;
+    } catch (e) {
+      break;
+    }
+  }
   return w;
 }
 
@@ -22,6 +33,13 @@ function getDoc(): Document {
 }
 
 const ROOT = getRootWindow();
+
+let mathQuizBridge: MathQuizBridge = (ROOT as any)[MATH_QUIZ_KEY];
+if (!mathQuizBridge) {
+  mathQuizBridge = new MathQuizBridge(getDoc());
+  (ROOT as any)[MATH_QUIZ_KEY] = mathQuizBridge;
+}
+mathQuizBridge.install();
 
 injectStyleOnce(getDoc());
 installDebugDomObserver(ROOT, DEBUG_OBSERVER_KEY);
@@ -52,3 +70,10 @@ const publicAPI: FQPublicAPI = {
 };
 
 (ROOT as any).__LIA_FRACTION_QUIZ__ = publicAPI;
+
+const mathQuizAPI: MathQuizPublicAPI = {
+  refresh: () => mathQuizBridge.refresh(),
+  destroy: () => mathQuizBridge.destroy()
+};
+
+(ROOT as any).__LIA_MATH_QUIZ__ = mathQuizAPI;
