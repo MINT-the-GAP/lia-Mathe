@@ -37,6 +37,15 @@ export function injectStyleOnce(doc: Document): void {
 
 .fq-widget { display: inline-block; }
 
+.fq-native-quiz-source {
+  display: none !important;
+}
+
+.lia-quiz.fq-native-quiz > .lia-quiz__answers > input.lia-quiz__input,
+.lia-quiz.fq-native-quiz > .lia-quiz__answers > .icon {
+  display: none !important;
+}
+
 .fq-mount {
   display: flex;
   justify-content: center;

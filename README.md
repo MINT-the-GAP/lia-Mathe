@@ -30,46 +30,48 @@ formula:  \liaquiz \htmlClass{lia-math-quiz-slot}{\vphantom{\rule{0pt}{1.5em}}\h
 @circleQuiz: @circleQuiz_(@uid,@0)
 
 @circleQuiz_
-<div id="fq-circle-wrap-@0" class="fq-widget" data-fq-kind="circle" data-fq-uid="@0">
-  <div id="fq-circle-host-@0" class="fq-widget" data-fq-kind="circle" data-fq-uid="@0">
-    <div id="fq-circle-mount-@0" class="fq-mount"></div>
+<div id='fq-circle-wrap-@0' class='fq-widget' data-fq-kind='circle' data-fq-uid='@0'>
+  <div id='fq-circle-host-@0' class='fq-widget' data-fq-kind='circle' data-fq-uid='@0'>
+    <div id='fq-circle-mount-@0' class='fq-mount'></div>
 
-    <div id="fq-circle-range-@0" class="fq-range" data-label="Subdivisions">
-<input type="range" min="1" max="32" value="1" output="fq-c-n-@0">
+    <div id='fq-circle-range-@0' class='fq-range' data-label='Subdivisions'>
+<input type='range' min='1' max='32' value='1' output='fq-c-n-@0'>
     </div>
   </div>
-
-  [[!]]
-  <script>window.__LIA_FRACTION_QUIZ__ ? window.__LIA_FRACTION_QUIZ__.check("@0") : false</script>
 </div>
 
-<script modify="false">
+<script modify='false'>
 const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountCircle("@0", String.raw`@1`);
+if (_api) _api.mountCircle('@0', String.raw`@1`);
 </script>
+
+<span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
+
+[[fqok@0]]
 @end
 
 @circleQuizC: @circleQuizC_(@uid,@0,@1)
 
 @circleQuizC_
-<div id="fq-circle-wrap-@0" class="fq-widget" data-fq-kind="circle" data-fq-uid="@0">
-  <div id="fq-circle-host-@0" class="fq-widget" data-fq-kind="circle" data-fq-uid="@0">
-    <div id="fq-circle-mount-@0" class="fq-mount"></div>
+<div id='fq-circle-wrap-@0' class='fq-widget' data-fq-kind='circle' data-fq-uid='@0'>
+  <div id='fq-circle-host-@0' class='fq-widget' data-fq-kind='circle' data-fq-uid='@0'>
+    <div id='fq-circle-mount-@0' class='fq-mount'></div>
 
-    <div id="fq-circle-range-@0" class="fq-range" data-label="Subdivisions">
-<input type="range" min="1" max="32" value="1" output="fq-c-n-@0">
+    <div id='fq-circle-range-@0' class='fq-range' data-label='Subdivisions'>
+<input type='range' min='1' max='32' value='1' output='fq-c-n-@0'>
     </div>
   </div>
-
-  @2
-  [[!]]
-  <script>window.__LIA_FRACTION_QUIZ__ ? window.__LIA_FRACTION_QUIZ__.check("@0") : false</script>
 </div>
 
-<script modify="false">
+<script modify='false'>
 const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountCircle("@0", String.raw`@1`);
+if (_api) _api.mountCircle('@0', String.raw`@1`);
 </script>
+
+<span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
+
+@2
+[[fqok@0]]
 @end
 
 
@@ -77,54 +79,56 @@ if (_api) _api.mountCircle("@0", String.raw`@1`);
 @rectQuiz: @rectQuiz_(@uid,@0)
 
 @rectQuiz_
-<div id="fq-rect-wrap-@0" class="fq-widget" data-fq-kind="rect" data-fq-uid="@0">
-  <div id="fq-rect-host-@0" class="fq-widget" data-fq-kind="rect" data-fq-uid="@0">
-    <div id="fq-rect-mount-@0" class="fq-mount"></div>
+<div id='fq-rect-wrap-@0' class='fq-widget' data-fq-kind='rect' data-fq-uid='@0'>
+  <div id='fq-rect-host-@0' class='fq-widget' data-fq-kind='rect' data-fq-uid='@0'>
+    <div id='fq-rect-mount-@0' class='fq-mount'></div>
 
-    <div id="fq-rect-rows-wrap-@0" class="fq-range" data-label="rows">
-<input type="range" min="1" max="20" value="1" output="fq-r-rows-@0">
+    <div id='fq-rect-rows-wrap-@0' class='fq-range' data-label='rows'>
+<input type='range' min='1' max='20' value='1' output='fq-r-rows-@0'>
     </div>
 
-    <div id="fq-rect-cols-wrap-@0" class="fq-range" data-label="columns">
-<input type="range" min="1" max="20" value="1" output="fq-r-cols-@0">
+    <div id='fq-rect-cols-wrap-@0' class='fq-range' data-label='columns'>
+<input type='range' min='1' max='20' value='1' output='fq-r-cols-@0'>
     </div>
   </div>
-
-  [[!]]
-  <script>window.__LIA_FRACTION_QUIZ__ ? window.__LIA_FRACTION_QUIZ__.check("@0") : false</script>
 </div>
 
-<script modify="false">
+<script modify='false'>
 const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountRect("@0", String.raw`@1`);
+if (_api) _api.mountRect('@0', String.raw`@1`);
 </script>
+
+<span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
+
+[[fqok@0]]
 @end
 
 @rectQuizC: @rectQuizC_(@uid,@0,@1)
 
 @rectQuizC_
-<div id="fq-rect-wrap-@0" class="fq-widget" data-fq-kind="rect" data-fq-uid="@0">
-  <div id="fq-rect-host-@0" class="fq-widget" data-fq-kind="rect" data-fq-uid="@0">
-    <div id="fq-rect-mount-@0" class="fq-mount"></div>
+<div id='fq-rect-wrap-@0' class='fq-widget' data-fq-kind='rect' data-fq-uid='@0'>
+  <div id='fq-rect-host-@0' class='fq-widget' data-fq-kind='rect' data-fq-uid='@0'>
+    <div id='fq-rect-mount-@0' class='fq-mount'></div>
 
-    <div id="fq-rect-rows-wrap-@0" class="fq-range" data-label="rows">
-<input type="range" min="1" max="20" value="1" output="fq-r-rows-@0">
+    <div id='fq-rect-rows-wrap-@0' class='fq-range' data-label='rows'>
+<input type='range' min='1' max='20' value='1' output='fq-r-rows-@0'>
     </div>
 
-    <div id="fq-rect-cols-wrap-@0" class="fq-range" data-label="columns">
-<input type="range" min="1" max="20" value="1" output="fq-r-cols-@0">
+    <div id='fq-rect-cols-wrap-@0' class='fq-range' data-label='columns'>
+<input type='range' min='1' max='20' value='1' output='fq-r-cols-@0'>
     </div>
   </div>
-
-  @2
-  [[!]]
-  <script>window.__LIA_FRACTION_QUIZ__ ? window.__LIA_FRACTION_QUIZ__.check("@0") : false</script>
 </div>
 
-<script modify="false">
+<script modify='false'>
 const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountRect("@0", String.raw`@1`);
+if (_api) _api.mountRect('@0', String.raw`@1`);
 </script>
+
+<span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
+
+@2
+[[fqok@0]]
 @end
 
 -->
@@ -159,10 +163,12 @@ https://github.com/MINT-the-GAP/lia-Mathe
 
           --{{0}}--
 Displays an interactive pie chart. The student sets the number of sectors using a slider
-and clicks the matching sectors to represent the fraction.
+and clicks the matching sectors to represent the fraction. Native LiaScript hints can be
+added directly after the macro call.
 
 ``` markdown
 @circleQuiz(3/8)
+[[?]] Set the number of subdivisions to the denominator first.
 
 @circleQuizC(3/8,`<!-- data-solution-button="2" -->`)
 ```
@@ -170,6 +176,7 @@ and clicks the matching sectors to represent the fraction.
 ---
 
 @circleQuiz(3/8)
+[[?]] Set the number of subdivisions to the denominator first.
 
 @circleQuizC(3/8,`<!-- data-solution-button="2" -->`)
 
@@ -177,10 +184,12 @@ and clicks the matching sectors to represent the fraction.
 
           --{{0}}--
 Displays an interactive rectangle. The student sets rows and columns using sliders
-and clicks the matching cells to represent the fraction.
+and clicks the matching cells to represent the fraction. Native LiaScript hints can be
+added directly after the macro call.
 
 ``` markdown
 @rectQuiz(1/3)
+[[?]] The product of rows and columns should match the denominator.
 
 @rectQuizC(1/3,`<!-- data-solution-button="2" -->`)
 ```
@@ -188,6 +197,7 @@ and clicks the matching cells to represent the fraction.
 ---
 
 @rectQuiz(1/3)
+[[?]] The product of rows and columns should match the denominator.
 
 @rectQuizC(1/3,`<!-- data-solution-button="2" -->`)
 
@@ -296,84 +306,88 @@ formula:  \liaquiz \htmlClass{lia-math-quiz-slot}{\vphantom{\rule{0pt}{1.5em}}\h
 @circleQuiz: @circleQuiz_(@uid,@0)
 
 @circleQuiz_
-<div id="fq-circle-wrap-@0" class="fq-widget" data-fq-kind="circle" data-fq-uid="@0">
-  <div id="fq-circle-host-@0" class="fq-widget" data-fq-kind="circle" data-fq-uid="@0">
-    <div id="fq-circle-mount-@0" class="fq-mount"></div>
-    <div id="fq-circle-range-@0" class="fq-range" data-label="Subdivisions">
-<input type="range" min="1" max="32" value="1" output="fq-c-n-@0">
+<div id='fq-circle-wrap-@0' class='fq-widget' data-fq-kind='circle' data-fq-uid='@0'>
+  <div id='fq-circle-host-@0' class='fq-widget' data-fq-kind='circle' data-fq-uid='@0'>
+    <div id='fq-circle-mount-@0' class='fq-mount'></div>
+    <div id='fq-circle-range-@0' class='fq-range' data-label='Subdivisions'>
+<input type='range' min='1' max='32' value='1' output='fq-c-n-@0'>
     </div>
   </div>
-  [[!]]
-  <script>window.__LIA_FRACTION_QUIZ__ ? window.__LIA_FRACTION_QUIZ__.check("@0") : false</script>
 </div>
-<script modify="false">
+<script modify='false'>
 const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountCircle("@0", String.raw`@1`);
+if (_api) _api.mountCircle('@0', String.raw`@1`);
 </script>
+<span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
+
+[[fqok@0]]
 @end
 
 @circleQuizC: @circleQuizC_(@uid,@0,@1)
 
 @circleQuizC_
-<div id="fq-circle-wrap-@0" class="fq-widget" data-fq-kind="circle" data-fq-uid="@0">
-  <div id="fq-circle-host-@0" class="fq-widget" data-fq-kind="circle" data-fq-uid="@0">
-    <div id="fq-circle-mount-@0" class="fq-mount"></div>
-    <div id="fq-circle-range-@0" class="fq-range" data-label="Subdivisions">
-<input type="range" min="1" max="32" value="1" output="fq-c-n-@0">
+<div id='fq-circle-wrap-@0' class='fq-widget' data-fq-kind='circle' data-fq-uid='@0'>
+  <div id='fq-circle-host-@0' class='fq-widget' data-fq-kind='circle' data-fq-uid='@0'>
+    <div id='fq-circle-mount-@0' class='fq-mount'></div>
+    <div id='fq-circle-range-@0' class='fq-range' data-label='Subdivisions'>
+<input type='range' min='1' max='32' value='1' output='fq-c-n-@0'>
     </div>
   </div>
-  @2
-  [[!]]
-  <script>window.__LIA_FRACTION_QUIZ__ ? window.__LIA_FRACTION_QUIZ__.check("@0") : false</script>
 </div>
-<script modify="false">
+<script modify='false'>
 const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountCircle("@0", String.raw`@1`);
+if (_api) _api.mountCircle('@0', String.raw`@1`);
 </script>
+<span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
+
+@2
+[[fqok@0]]
 @end
 
 @rectQuiz: @rectQuiz_(@uid,@0)
 
 @rectQuiz_
-<div id="fq-rect-wrap-@0" class="fq-widget" data-fq-kind="rect" data-fq-uid="@0">
-  <div id="fq-rect-host-@0" class="fq-widget" data-fq-kind="rect" data-fq-uid="@0">
-    <div id="fq-rect-mount-@0" class="fq-mount"></div>
-    <div id="fq-rect-rows-wrap-@0" class="fq-range" data-label="rows">
-<input type="range" min="1" max="20" value="1" output="fq-r-rows-@0">
+<div id='fq-rect-wrap-@0' class='fq-widget' data-fq-kind='rect' data-fq-uid='@0'>
+  <div id='fq-rect-host-@0' class='fq-widget' data-fq-kind='rect' data-fq-uid='@0'>
+    <div id='fq-rect-mount-@0' class='fq-mount'></div>
+    <div id='fq-rect-rows-wrap-@0' class='fq-range' data-label='rows'>
+<input type='range' min='1' max='20' value='1' output='fq-r-rows-@0'>
     </div>
-    <div id="fq-rect-cols-wrap-@0" class="fq-range" data-label="columns">
-<input type="range" min="1" max="20" value="1" output="fq-r-cols-@0">
+    <div id='fq-rect-cols-wrap-@0' class='fq-range' data-label='columns'>
+<input type='range' min='1' max='20' value='1' output='fq-r-cols-@0'>
     </div>
   </div>
-  [[!]]
-  <script>window.__LIA_FRACTION_QUIZ__ ? window.__LIA_FRACTION_QUIZ__.check("@0") : false</script>
 </div>
-<script modify="false">
+<script modify='false'>
 const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountRect("@0", String.raw`@1`);
+if (_api) _api.mountRect('@0', String.raw`@1`);
 </script>
+<span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
+
+[[fqok@0]]
 @end
 
 @rectQuizC: @rectQuizC_(@uid,@0,@1)
 
 @rectQuizC_
-<div id="fq-rect-wrap-@0" class="fq-widget" data-fq-kind="rect" data-fq-uid="@0">
-  <div id="fq-rect-host-@0" class="fq-widget" data-fq-kind="rect" data-fq-uid="@0">
-    <div id="fq-rect-mount-@0" class="fq-mount"></div>
-    <div id="fq-rect-rows-wrap-@0" class="fq-range" data-label="rows">
-<input type="range" min="1" max="20" value="1" output="fq-r-rows-@0">
+<div id='fq-rect-wrap-@0' class='fq-widget' data-fq-kind='rect' data-fq-uid='@0'>
+  <div id='fq-rect-host-@0' class='fq-widget' data-fq-kind='rect' data-fq-uid='@0'>
+    <div id='fq-rect-mount-@0' class='fq-mount'></div>
+    <div id='fq-rect-rows-wrap-@0' class='fq-range' data-label='rows'>
+<input type='range' min='1' max='20' value='1' output='fq-r-rows-@0'>
     </div>
-    <div id="fq-rect-cols-wrap-@0" class="fq-range" data-label="columns">
-<input type="range" min="1" max="20" value="1" output="fq-r-cols-@0">
+    <div id='fq-rect-cols-wrap-@0' class='fq-range' data-label='columns'>
+<input type='range' min='1' max='20' value='1' output='fq-r-cols-@0'>
     </div>
   </div>
-  @2
-  [[!]]
-  <script>window.__LIA_FRACTION_QUIZ__ ? window.__LIA_FRACTION_QUIZ__.check("@0") : false</script>
 </div>
-<script modify="false">
+<script modify='false'>
 const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountRect("@0", String.raw`@1`);
+if (_api) _api.mountRect('@0', String.raw`@1`);
 </script>
+<span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
+
+@2
+[[fqok@0]]
 @end
 ```

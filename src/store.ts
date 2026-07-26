@@ -6,6 +6,9 @@ import { parseFraction, boolArray, bestFactorPair, clampInt } from "./fraction";
 import { renderCircleSVG, renderRectSVG } from "./renderer";
 
 // Key used to mark that a wrap element already has a delegated click handler installed.
+const QUIZ_SOURCE_SELECTOR = '.fq-native-quiz-source[data-fq-quiz]';
+const QUIZ_NATIVE_ATTRIBUTE = 'data-fq-quiz-native';
+const QUIZ_CLASS = 'fq-native-quiz';
 const CLICK_INSTALLED_KEY = "__fqClickInstalled";
 
 function debug(tag: string, ...rest: unknown[]): void {
@@ -120,7 +123,7 @@ export function installDebugDomObserver(root: Window & typeof globalThis, key: s
 export class FQStore implements FQPublicAPI {
   private widgets: Record<string, FQWidget> = Object.create(null);
 
-  readonly version = 3;
+  readonly version = 4;
 
   // Returns the widget for uid, creating it lazily if it doesn't exist yet.
   getWidget(uid: string, kind?: FQKind | ""): FQWidget {
@@ -145,7 +148,10 @@ export class FQStore implements FQPublicAPI {
           circleInput: null,
           rowsInput: null,
           colsInput: null,
+          quizSource: null,
+          quizInput: null,
           observer: null,
+          _quizObserver: null,
           _quizScope: null,
           _quizClickHandler: null,
           _quizBridgeInstalled: false
@@ -166,6 +172,88 @@ export class FQStore implements FQPublicAPI {
   private getDims(uid: string) {
     const w = this.getWidget(uid);
     return w.dims || { rows: w.meta.rows || 1, cols: w.meta.cols || 1 };
+  }
+
+  private findQuizBinding(uid: string): {
+    source: HTMLElement;
+    input: HTMLInputElement;
+    scope: HTMLElement;
+  } | null {
+    const sources = Array.from(
+      document.querySelectorAll<HTMLElement>(QUIZ_SOURCE_SELECTOR)
+    );
+    const sourceIndex = sources.findIndex(
+      source => source.getAttribute('data-fq-quiz') === uid
+    );
+    if (sourceIndex < 0) return null;
+
+    const source = sources[sourceIndex];
+    const ownScope = source.closest('.lia-quiz') as HTMLElement | null;
+    const ownInput = ownScope
+      ? ownScope.querySelector<HTMLInputElement>('input.lia-quiz__input')
+      : null;
+    if (ownScope && ownInput) return { source, input: ownInput, scope: ownScope };
+
+    const view = document.defaultView || window;
+    const following = ((view as any).Node && (view as any).Node.DOCUMENT_POSITION_FOLLOWING) || 4;
+    const boundary = sources[sourceIndex + 1] || null;
+    const sourceSlide = source.closest('.lia-slide__content');
+    const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(
+      'input.lia-quiz__input:not(.lia-math-quiz-proxy)'
+    ));
+
+    for (const input of inputs) {
+      const scope = input.closest('.lia-quiz') as HTMLElement | null;
+      if (!scope) continue;
+      if (sourceSlide && input.closest('.lia-slide__content') !== sourceSlide) continue;
+      if (!(source.compareDocumentPosition(input) & following)) continue;
+      if (boundary && !(input.compareDocumentPosition(boundary) & following)) continue;
+      return { source, input, scope };
+    }
+
+    return null;
+  }
+
+  private refreshQuizBinding(uid: string): boolean {
+    const nodes = this.nodes(uid);
+    const binding = this.findQuizBinding(uid);
+    if (!binding) {
+      if (nodes.quizSource && !nodes.quizSource.isConnected) nodes.quizSource = null;
+      if (nodes.quizInput && !nodes.quizInput.isConnected) nodes.quizInput = null;
+      return false;
+    }
+
+    if (nodes.quizInput && nodes.quizInput !== binding.input && nodes.quizInput.isConnected) {
+      nodes.quizInput.removeAttribute(QUIZ_NATIVE_ATTRIBUTE);
+    }
+    if (nodes._quizScope && nodes._quizScope !== binding.scope && nodes._quizScope.isConnected) {
+      nodes._quizScope.classList.remove(QUIZ_CLASS);
+      nodes._quizScope.removeAttribute('data-fq-quiz');
+    }
+
+    nodes.quizSource = binding.source;
+    nodes.quizInput = binding.input;
+    binding.input.setAttribute(QUIZ_NATIVE_ATTRIBUTE, uid);
+    binding.scope.classList.add(QUIZ_CLASS);
+    binding.scope.setAttribute('data-fq-quiz', uid);
+    this.ensureQuizBridge(uid, binding.scope);
+    return true;
+  }
+
+  private syncQuizInput(uid: string): void {
+    const nodes = this.nodes(uid);
+    const input = nodes.quizInput;
+    const source = nodes.quizSource;
+    if (!input || !source || !input.isConnected || input.disabled) return;
+
+    const answer = source.getAttribute('data-fq-answer') || `fqok${uid}`;
+    const nextValue = this.isCorrect(uid) ? answer : `fqno${uid}`;
+    if (input.value === nextValue) return;
+
+    input.value = nextValue;
+    const view = input.ownerDocument.defaultView || window;
+    input.dispatchEvent(new view.Event('input', { bubbles: true }));
+    input.dispatchEvent(new view.Event('change', { bubbles: true }));
   }
 
   // Attaches input+change listeners to a range input without duplicating the guard.
@@ -231,9 +319,9 @@ export class FQStore implements FQPublicAPI {
     if (nodes.rowsInput || nodes.colsInput) this.bindRectInputs(uid, nodes.rowsInput, nodes.colsInput);
     localizeRangeLabels(uid, nodes.kind);
     if (nodes.wrap) {
-      this.ensureQuizBridge(uid, nodes.wrap);
       this.installClickDelegation(uid, nodes.wrap);
     }
+    this.refreshQuizBinding(uid);
 
     return nodes;
   }
@@ -497,13 +585,13 @@ export class FQStore implements FQPublicAPI {
     if (nodes.circleInput) this.bindCircleInput(uid, nodes.circleInput);
     if (nodes.rowsInput || nodes.colsInput) this.bindRectInputs(uid, nodes.rowsInput, nodes.colsInput);
     localizeRangeLabels(uid, kind || nodes.kind);
+    meta.ready = true;
     if (nodes.wrap) {
       this.installClickDelegation(uid, nodes.wrap);
       this.installDomObserver(uid, nodes.wrap);
-      this.ensureQuizBridge(uid, nodes.wrap);
     }
+    this.refreshQuizBinding(uid);
 
-    meta.ready = true;
     this.syncInputs(uid, true);
     this.syncDomState(uid);
     this.render(uid);
@@ -578,6 +666,7 @@ export class FQStore implements FQPublicAPI {
     }
 
     this.syncInputs(uid, false);
+    this.syncQuizInput(uid);
   }
 
   render(uid: string): boolean {
@@ -628,6 +717,12 @@ export class FQStore implements FQPublicAPI {
     return /(aufl|aufl[oö]sen|l[oö]sung|show solution|solution|resolve)/i.test(this.labelOf(el));
   }
 
+  private isCheckButton(el: Element | null): boolean {
+    if (!el) return false;
+    if (el.classList.contains('lia-quiz__check')) return true;
+    return /(pruefen|check)/i.test(this.labelOf(el));
+  }
+
   private looksRevealed(scope: Element): boolean {
     if (!scope) return false;
     // LiaScript sets class "resolved" on the .lia-quiz wrapper when the solution is revealed
@@ -638,16 +733,35 @@ export class FQStore implements FQPublicAPI {
     return /(aufgel|aufl[oö]s|l[oö]sung|show solution|resolved|solution)/i.test(text);
   }
 
+  private syncQuizState(uid: string, scope: HTMLElement): void {
+    const meta = this.meta(uid);
+    if (!meta.ready) return;
+
+    if (this.looksRevealed(scope)) {
+      if (!meta.revealed || !meta.locked) this.markRevealed(uid);
+      return;
+    }
+
+    if (scope.classList.contains('solved')) {
+      if (!this.isCorrect(uid)) this.applySolution(uid);
+      if (!meta.solved || !meta.locked) this.markSolved(uid);
+    }
+  }
+
   ensureQuizBridge(uid: string, scope: HTMLElement): void {
     const nodes = this.nodes(uid);
     const meta = this.meta(uid);
 
     if (!scope) return;
-    if (nodes._quizBridgeInstalled && nodes._quizScope === scope && scope.isConnected) return;
+    if (nodes._quizBridgeInstalled && nodes._quizScope === scope && scope.isConnected) {
+      this.syncQuizState(uid, scope);
+      this.syncQuizInput(uid);
+      return;
+    }
 
-    if (nodes.observer) {
-      try { nodes.observer.disconnect(); } catch (e) {}
-      nodes.observer = null;
+    if (nodes._quizObserver) {
+      try { nodes._quizObserver.disconnect(); } catch (e) {}
+      nodes._quizObserver = null;
     }
 
     if (nodes._quizScope && nodes._quizClickHandler) {
@@ -658,9 +772,18 @@ export class FQStore implements FQPublicAPI {
       const btn = evt.target && (evt.target as Element).closest
         ? (evt.target as Element).closest("button, input[type='button'], input[type='submit']")
         : null;
-      if (!btn || !this.isRevealButton(btn) || !meta.ready) return;
-      debug("quiz-reveal-click", uid, { label: this.labelOf(btn) });
-      setTimeout(() => { this.markRevealed(uid); }, 0);
+      if (!btn || !meta.ready) return;
+
+      if (this.isCheckButton(btn)) {
+        this.syncQuizInput(uid);
+        setTimeout(() => { this.syncQuizState(uid, scope); }, 0);
+        return;
+      }
+
+      if (this.isRevealButton(btn)) {
+        debug("quiz-reveal-click", uid, { label: this.labelOf(btn) });
+        setTimeout(() => { this.markRevealed(uid); }, 0);
+      }
     };
 
     scope.addEventListener("click", clickHandler, true);
@@ -668,11 +791,7 @@ export class FQStore implements FQPublicAPI {
     let obs: MutationObserver | null = null;
     if (typeof MutationObserver !== "undefined") {
       obs = new MutationObserver(() => {
-        if (!meta.ready || meta.revealed) return;
-        if (this.looksRevealed(scope)) {
-          debug("quiz-observer-detected-revealed", uid);
-          this.markRevealed(uid);
-        }
+        this.syncQuizState(uid, scope);
       });
       try {
         // LiaScript mutates the class attribute on the .lia-quiz wrapper to add "resolved"
@@ -689,7 +808,9 @@ export class FQStore implements FQPublicAPI {
     nodes._quizBridgeInstalled = true;
     nodes._quizScope = scope;
     nodes._quizClickHandler = clickHandler;
-    nodes.observer = obs;
+    nodes._quizObserver = obs;
+    this.syncQuizState(uid, scope);
+    this.syncQuizInput(uid);
   }
 
   onCheck(uid: string, passed: boolean): boolean {
@@ -712,9 +833,15 @@ export class FQStore implements FQPublicAPI {
   mount(uid: string, kind: FQKind, target: string): void {
     uid = String(uid == null ? "" : uid);
     const p = `fq-${kind}-`;
+    let widgetRegistered = false;
     
     // Try to find and register elements immediately
     const tryMount = (): boolean => {
+      if (widgetRegistered) {
+        this.refreshQuizBinding(uid);
+        return !!this.nodes(uid).quizInput;
+      }
+
       const wrap  = document.getElementById(p + "wrap-"  + uid);
       const host  = document.getElementById(p + "host-"  + uid);
       const mount = document.getElementById(p + "mount-" + uid);
@@ -724,8 +851,8 @@ export class FQStore implements FQPublicAPI {
         const input = rangeWrap ? rangeWrap.querySelector<HTMLInputElement>('input[type="range"]') : null;
         if (wrap && host && mount && input) {
           this.register(uid, { kind, wrap, host, mount, circleInput: input, target, initialParts: input.value || 1 });
-          this.ensureQuizBridge(uid, wrap);
-          return true;
+          widgetRegistered = true;
+          return !!this.nodes(uid).quizInput;
         }
       } else {
         const rowsWrap = document.getElementById(p + "rows-wrap-" + uid);
@@ -734,8 +861,8 @@ export class FQStore implements FQPublicAPI {
         const colsInput = colsWrap ? colsWrap.querySelector<HTMLInputElement>('input[type="range"]') : null;
         if (wrap && host && mount && rowsInput && colsInput) {
           this.register(uid, { kind, wrap, host, mount, rowsInput, colsInput, target, initialRows: rowsInput.value || 1, initialCols: colsInput.value || 1 });
-          this.ensureQuizBridge(uid, wrap);
-          return true;
+          widgetRegistered = true;
+          return !!this.nodes(uid).quizInput;
         }
       }
       return false;
@@ -786,7 +913,7 @@ export class FQStore implements FQPublicAPI {
         debug("mount-timeout", uid, kind, "elements not found");
       }
       cleanup();
-    }, 50) as unknown as number;
+    }, 250) as unknown as number;
   }
 
   // Public API wrappers — delegate to the unified mount.
@@ -819,6 +946,19 @@ export class FQStore implements FQPublicAPI {
         try { nodes.observer.disconnect(); } catch (e) {}
         nodes.observer = null;
       }
+      if (nodes._quizObserver) {
+        try { nodes._quizObserver.disconnect(); } catch (e) {}
+        nodes._quizObserver = null;
+      }
+      if (nodes._quizScope && nodes._quizClickHandler) {
+        try { nodes._quizScope.removeEventListener('click', nodes._quizClickHandler, true); } catch (e) {}
+      }
+      if (nodes.quizInput) nodes.quizInput.removeAttribute(QUIZ_NATIVE_ATTRIBUTE);
+      if (nodes._quizScope) {
+        nodes._quizScope.classList.remove(QUIZ_CLASS);
+        nodes._quizScope.removeAttribute('data-fq-quiz');
+      }
+      nodes._quizBridgeInstalled = false;
     }
   }
 }

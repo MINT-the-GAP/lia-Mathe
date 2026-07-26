@@ -36,7 +36,10 @@ export interface FQNodes {
   circleInput: HTMLInputElement | null;
   rowsInput: HTMLInputElement | null;
   colsInput: HTMLInputElement | null;
+  quizSource: HTMLElement | null;
+  quizInput: HTMLInputElement | null;
   observer: MutationObserver | null;
+  _quizObserver: MutationObserver | null;
   _quizScope: HTMLElement | null;
   _quizClickHandler: ((e: Event) => void) | null;
   _quizBridgeInstalled: boolean;
