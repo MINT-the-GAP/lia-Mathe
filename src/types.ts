@@ -38,7 +38,6 @@ export interface FQNodes {
   colsInput: HTMLInputElement | null;
   quizSource: HTMLElement | null;
   quizInput: HTMLInputElement | null;
-  observer: MutationObserver | null;
   _quizObserver: MutationObserver | null;
   _quizScope: HTMLElement | null;
   _quizClickHandler: ((e: Event) => void) | null;
@@ -58,12 +57,12 @@ export interface FQWidgetSnapshot {
 }
 
 export interface FQPublicAPI {
-  mountCircle(uid: string, target: string): void;
-  mountRect(uid: string, target: string): void;
-  check(uid: string): boolean;
-  onReveal(uid: string): boolean;
+  mountCircle(uid: string, target: string, host?: Element): void;
+  mountRect(uid: string, target: string, host?: Element): void;
+  check(uid: string, host?: Element): boolean;
+  onReveal(uid: string, host?: Element): boolean;
   destroy(): void;
-  getAllWidgets(): Record<string, FQWidgetSnapshot>;
+  getAllWidgets(host?: Element): Record<string, FQWidgetSnapshot>;
 }
 
 export interface MathQuizPublicAPI {

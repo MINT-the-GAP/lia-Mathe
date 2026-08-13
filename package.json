@@ -3,7 +3,10 @@
   "version": "0.0.2",
   "description": "LiaScript plugin for interactive fraction quizzes with circle and rectangle visualizations",
   "scripts": {
-    "build": "parcel build src/index.ts --dist-dir dist --no-scope-hoist"
+    "build": "parcel build src/index.ts --dist-dir dist --no-scope-hoist",
+    "test": "node --test tests/source-regression.test.mjs",
+    "pretest:firefox": "npm run build",
+    "test:firefox": "node tests/firefox-dynflex-smoke.mjs"
   },
   "devDependencies": {
     "parcel": "^2.13.3",

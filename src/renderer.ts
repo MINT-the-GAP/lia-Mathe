@@ -4,8 +4,8 @@ import { SVG_SIZE, SVG_PADDING } from "./constants";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-function svgEl<T extends SVGElement>(tag: string): T {
-  return document.createElementNS(SVG_NS, tag) as T;
+function svgEl<T extends SVGElement>(mount: Element, tag: string): T {
+  return mount.ownerDocument.createElementNS(SVG_NS, tag) as T;
 }
 
 function attrs(el: SVGElement, map: Record<string, string>): void {
@@ -23,16 +23,16 @@ export function renderCircleSVG(mount: Element, arr: boolean[]): void {
   const step = 360 / n;
   const startOffset = -90;
 
-  const svg = svgEl<SVGSVGElement>("svg");
-  attrs(svg, { class: "fq-svg", viewBox: `0 0 ${W} ${H}`, xmlns: SVG_NS, width: String(W), height: String(H), "aria-hidden": "true" });
+  const svg = svgEl<SVGSVGElement>(mount, "svg");
+  attrs(svg, { class: "fq-svg", viewBox: `0 0 ${W} ${H}`, xmlns: SVG_NS, width: String(W), height: String(H), "aria-hidden": "true", "data-fq-kind": "circle", "data-fq-parts": String(n) });
 
   // Background circle
-  const bg = svgEl<SVGCircleElement>("circle");
+  const bg = svgEl<SVGCircleElement>(mount, "circle");
   attrs(bg, { cx: String(cx), cy: String(cy), r: String(r), stroke: "#000000", "stroke-width": "2", fill: "#ffffff" });
   svg.appendChild(bg);
 
   if (n === 1) {
-    const c = svgEl<SVGCircleElement>("circle");
+    const c = svgEl<SVGCircleElement>(mount, "circle");
     attrs(c, { "data-fq-part": "0", class: "fq-clickable", cx: String(cx), cy: String(cy), r: String(r), fill: arr[0] ? "var(--fq-mark)" : "transparent" });
     svg.appendChild(c);
   } else {
@@ -45,7 +45,7 @@ export function renderCircleSVG(mount: Element, arr: boolean[]): void {
       const y1 = cy + r * Math.sin(a1);
       const largeArc = step > 180 ? 1 : 0;
 
-      const path = svgEl<SVGPathElement>("path");
+      const path = svgEl<SVGPathElement>(mount, "path");
       attrs(path, {
         "data-fq-part": String(i),
         class: "fq-clickable",
@@ -54,14 +54,14 @@ export function renderCircleSVG(mount: Element, arr: boolean[]): void {
       });
       svg.appendChild(path);
 
-      const line = svgEl<SVGLineElement>("line");
+      const line = svgEl<SVGLineElement>(mount, "line");
       attrs(line, { x1: String(cx), y1: String(cy), x2: String(x0), y2: String(y0), stroke: "#000000", "stroke-width": "2" });
       svg.appendChild(line);
     }
   }
 
   // Outline circle
-  const outline = svgEl<SVGCircleElement>("circle");
+  const outline = svgEl<SVGCircleElement>(mount, "circle");
   attrs(outline, { cx: String(cx), cy: String(cy), r: String(r), stroke: "#000000", "stroke-width": "2", fill: "none" });
   svg.appendChild(outline);
 
@@ -78,18 +78,18 @@ export function renderRectSVG(mount: Element, arr: boolean[], rows: number, cols
   const rw = usableW / cols;
   const rh = usableH / rows;
 
-  const svg = svgEl<SVGSVGElement>("svg");
-  attrs(svg, { class: "fq-svg", viewBox: `0 0 ${W} ${H}`, xmlns: SVG_NS, width: String(W), height: String(H), "aria-hidden": "true" });
+  const svg = svgEl<SVGSVGElement>(mount, "svg");
+  attrs(svg, { class: "fq-svg", viewBox: `0 0 ${W} ${H}`, xmlns: SVG_NS, width: String(W), height: String(H), "aria-hidden": "true", "data-fq-kind": "rect", "data-fq-parts": String(arr.length), "data-fq-rows": String(rows), "data-fq-cols": String(cols) });
 
   // Background rect
-  const bg = svgEl<SVGRectElement>("rect");
+  const bg = svgEl<SVGRectElement>(mount, "rect");
   attrs(bg, { x: "0", y: "0", width: String(W), height: String(H), fill: "#ffffff", stroke: "#000000", "stroke-width": "2" });
   svg.appendChild(bg);
 
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const i = row * cols + col;
-      const cell = svgEl<SVGRectElement>("rect");
+      const cell = svgEl<SVGRectElement>(mount, "rect");
       attrs(cell, {
         "data-fq-part": String(i),
         class: "fq-clickable",
@@ -105,13 +105,13 @@ export function renderRectSVG(mount: Element, arr: boolean[], rows: number, cols
 
   for (let row = 0; row <= rows; row++) {
     const y = padding + row * rh;
-    const line = svgEl<SVGLineElement>("line");
+    const line = svgEl<SVGLineElement>(mount, "line");
     attrs(line, { x1: String(padding), y1: String(y), x2: String(W - padding), y2: String(y), stroke: "#000000", "stroke-width": "2" });
     svg.appendChild(line);
   }
   for (let col = 0; col <= cols; col++) {
     const x = padding + col * rw;
-    const line = svgEl<SVGLineElement>("line");
+    const line = svgEl<SVGLineElement>(mount, "line");
     attrs(line, { x1: String(x), y1: String(padding), x2: String(x), y2: String(H - padding), stroke: "#000000", "stroke-width": "2" });
     svg.appendChild(line);
   }

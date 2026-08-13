@@ -1,7 +1,7 @@
 // FQStore: manages all widget state, DOM binding, rendering, and quiz bridge logic.
 
 import { FQKind, FQMeta, FQNodes, FQFraction, FQWidget, FQPublicAPI, FQWidgetSnapshot } from "./types";
-import { MAX_CIRCLE_PARTS, MAX_RECT_DIM, DEBUG_FQ } from "./constants";
+import { MAX_CIRCLE_PARTS, MAX_RECT_DIM, MOUNT_TIMEOUT_MS, DEBUG_FQ } from "./constants";
 import { parseFraction, boolArray, bestFactorPair, clampInt } from "./fraction";
 import { renderCircleSVG, renderRectSVG } from "./renderer";
 
@@ -16,7 +16,7 @@ function debug(tag: string, ...rest: unknown[]): void {
   try { console.log("[FQDBG]", tag, ...rest); } catch (e) {}
 }
 
-function detectUiLanguage(): string {
+function detectUiLanguage(doc: Document): string {
   const langs: string[] = [];
   try {
     const root = (window as any);
@@ -28,7 +28,7 @@ function detectUiLanguage(): string {
     }
   } catch (e) {}
   try {
-    if (document.documentElement) langs.push(document.documentElement.lang || "");
+    if (doc.documentElement) langs.push(doc.documentElement.lang || "");
   } catch (e) {}
   try {
     if (navigator.languages) {
@@ -50,15 +50,15 @@ function getLabels(lang: string): FQLabels {
   return { subdivisions: "Subdivisions", rows: "Rows", cols: "Columns" };
 }
 
-function localizeRangeLabels(uid: string, kind: string): void {
-  const labels = getLabels(detectUiLanguage());
+function localizeRangeLabels(doc: Document, uid: string, kind: string): void {
+  const labels = getLabels(detectUiLanguage(doc));
   if (kind === "circle") {
-    const range = document.getElementById("fq-circle-range-" + uid);
+    const range = doc.getElementById("fq-circle-range-" + uid);
     if (range) range.setAttribute("data-label", labels.subdivisions);
   }
   if (kind === "rect") {
-    const rowsWrap = document.getElementById("fq-rect-rows-wrap-" + uid);
-    const colsWrap = document.getElementById("fq-rect-cols-wrap-" + uid);
+    const rowsWrap = doc.getElementById("fq-rect-rows-wrap-" + uid);
+    const colsWrap = doc.getElementById("fq-rect-cols-wrap-" + uid);
     if (rowsWrap) rowsWrap.setAttribute("data-label", labels.rows);
     if (colsWrap) colsWrap.setAttribute("data-label", labels.cols);
   }
@@ -122,8 +122,13 @@ export function installDebugDomObserver(root: Window & typeof globalThis, key: s
 
 export class FQStore implements FQPublicAPI {
   private widgets: Record<string, FQWidget> = Object.create(null);
+  private domObserver: MutationObserver | null = null;
+  private mountAttempts: Record<string, () => void> = Object.create(null);
+  private destroyed = false;
 
-  readonly version = 4;
+  readonly version = 5;
+
+  constructor(private readonly doc: Document = document) {}
 
   // Returns the widget for uid, creating it lazily if it doesn't exist yet.
   getWidget(uid: string, kind?: FQKind | ""): FQWidget {
@@ -150,7 +155,6 @@ export class FQStore implements FQPublicAPI {
           colsInput: null,
           quizSource: null,
           quizInput: null,
-          observer: null,
           _quizObserver: null,
           _quizScope: null,
           _quizClickHandler: null,
@@ -180,7 +184,7 @@ export class FQStore implements FQPublicAPI {
     scope: HTMLElement;
   } | null {
     const sources = Array.from(
-      document.querySelectorAll<HTMLElement>(QUIZ_SOURCE_SELECTOR)
+      this.doc.querySelectorAll<HTMLElement>(QUIZ_SOURCE_SELECTOR)
     );
     const sourceIndex = sources.findIndex(
       source => source.getAttribute('data-fq-quiz') === uid
@@ -194,11 +198,11 @@ export class FQStore implements FQPublicAPI {
       : null;
     if (ownScope && ownInput) return { source, input: ownInput, scope: ownScope };
 
-    const view = document.defaultView || window;
+    const view = this.doc.defaultView || window;
     const following = ((view as any).Node && (view as any).Node.DOCUMENT_POSITION_FOLLOWING) || 4;
     const boundary = sources[sourceIndex + 1] || null;
     const sourceSlide = source.closest('.lia-slide__content');
-    const inputs = Array.from(document.querySelectorAll<HTMLInputElement>(
+    const inputs = Array.from(this.doc.querySelectorAll<HTMLInputElement>(
       'input.lia-quiz__input:not(.lia-math-quiz-proxy)'
     ));
 
@@ -276,25 +280,25 @@ export class FQStore implements FQPublicAPI {
     const prevRowsInput = nodes.rowsInput;
     const prevColsInput = nodes.colsInput;
 
-    const circleWrap = document.getElementById("fq-circle-wrap-" + uid);
-    const rectWrap = document.getElementById("fq-rect-wrap-" + uid);
+    const circleWrap = this.doc.getElementById("fq-circle-wrap-" + uid);
+    const rectWrap = this.doc.getElementById("fq-rect-wrap-" + uid);
 
     if (circleWrap) {
       nodes.kind = "circle";
       nodes.wrap = circleWrap;
-      nodes.host = document.getElementById("fq-circle-host-" + uid);
-      nodes.mount = document.getElementById("fq-circle-mount-" + uid);
-      const rangeWrap = document.getElementById("fq-circle-range-" + uid);
+      nodes.host = this.doc.getElementById("fq-circle-host-" + uid);
+      nodes.mount = this.doc.getElementById("fq-circle-mount-" + uid);
+      const rangeWrap = this.doc.getElementById("fq-circle-range-" + uid);
       nodes.circleInput = rangeWrap ? rangeWrap.querySelector('input[type="range"]') : null;
       nodes.rowsInput = null;
       nodes.colsInput = null;
     } else if (rectWrap) {
       nodes.kind = "rect";
       nodes.wrap = rectWrap;
-      nodes.host = document.getElementById("fq-rect-host-" + uid);
-      nodes.mount = document.getElementById("fq-rect-mount-" + uid);
-      const rowsWrap = document.getElementById("fq-rect-rows-wrap-" + uid);
-      const colsWrap = document.getElementById("fq-rect-cols-wrap-" + uid);
+      nodes.host = this.doc.getElementById("fq-rect-host-" + uid);
+      nodes.mount = this.doc.getElementById("fq-rect-mount-" + uid);
+      const rowsWrap = this.doc.getElementById("fq-rect-rows-wrap-" + uid);
+      const colsWrap = this.doc.getElementById("fq-rect-cols-wrap-" + uid);
       nodes.rowsInput = rowsWrap ? rowsWrap.querySelector('input[type="range"]') : null;
       nodes.colsInput = colsWrap ? colsWrap.querySelector('input[type="range"]') : null;
       nodes.circleInput = null;
@@ -317,9 +321,10 @@ export class FQStore implements FQPublicAPI {
 
     if (nodes.circleInput) this.bindCircleInput(uid, nodes.circleInput);
     if (nodes.rowsInput || nodes.colsInput) this.bindRectInputs(uid, nodes.rowsInput, nodes.colsInput);
-    localizeRangeLabels(uid, nodes.kind);
+    localizeRangeLabels(this.doc, uid, nodes.kind);
     if (nodes.wrap) {
       this.installClickDelegation(uid, nodes.wrap);
+      this.installDomObserver();
     }
     this.refreshQuizBinding(uid);
 
@@ -345,22 +350,54 @@ export class FQStore implements FQPublicAPI {
     }, true);
   }
 
-  // Watches the wrap for DOM mutations — re-queries node references when the widget is re-mounted.
-  private installDomObserver(uid: string, wrap: HTMLElement): void {
-    const nodes = this.nodes(uid);
-    if (nodes.observer) return; // already installed
+  // One observer per document repairs widgets after LiaScript or DynFlex replaces DOM nodes.
+  private installDomObserver(): void {
+    if (this.domObserver) return;
     if (typeof MutationObserver === "undefined") return;
 
     const obs = new MutationObserver(() => {
-      this.refreshNodes(uid);
-      this.syncDomState(uid);
-      this.render(uid);
+      for (const widgetUid in this.widgets) {
+        this.refreshNodes(widgetUid);
+        this.syncDomState(widgetUid);
+        if (!this.hasHealthyRender(widgetUid)) this.render(widgetUid);
+      }
     });
 
     try {
-      obs.observe(wrap.parentElement || wrap, { childList: true, subtree: false });
-      nodes.observer = obs;
+      obs.observe(this.doc, { childList: true, subtree: true });
+      this.domObserver = obs;
     } catch (e) {}
+  }
+
+  private hasHealthyRender(uid: string): boolean {
+    const nodes = this.nodes(uid);
+    const mount = nodes.mount;
+    if (!mount || !mount.isConnected) return false;
+
+    const w = this.getWidget(uid);
+    const svgs = mount.querySelectorAll(':scope > svg.fq-svg');
+    if (svgs.length !== 1) return false;
+    const svg = svgs[0];
+    const kind = svg.getAttribute('data-fq-kind');
+    const parts = parseInt(svg.getAttribute('data-fq-parts') || '', 10);
+    if (kind !== w.meta.kind || parts !== w.state.length) return false;
+    if (svg.querySelectorAll('[data-fq-part]').length !== w.state.length) return false;
+
+    if (kind === 'circle') {
+      const expectedCircles = w.state.length === 1 ? 3 : 2;
+      const expectedLines = w.state.length === 1 ? 0 : w.state.length;
+      return (
+        svg.querySelectorAll('circle').length === expectedCircles &&
+        svg.querySelectorAll('line').length === expectedLines
+      );
+    }
+    const dims = this.getDims(uid);
+    return (
+      parseInt(svg.getAttribute('data-fq-rows') || '', 10) === dims.rows &&
+      parseInt(svg.getAttribute('data-fq-cols') || '', 10) === dims.cols &&
+      svg.querySelectorAll('rect').length === w.state.length + 1 &&
+      svg.querySelectorAll('line').length === dims.rows + dims.cols + 2
+    );
   }
 
   parseTarget(raw: unknown): FQFraction {
@@ -584,11 +621,11 @@ export class FQStore implements FQPublicAPI {
 
     if (nodes.circleInput) this.bindCircleInput(uid, nodes.circleInput);
     if (nodes.rowsInput || nodes.colsInput) this.bindRectInputs(uid, nodes.rowsInput, nodes.colsInput);
-    localizeRangeLabels(uid, kind || nodes.kind);
+    localizeRangeLabels(this.doc, uid, kind || nodes.kind);
     meta.ready = true;
     if (nodes.wrap) {
       this.installClickDelegation(uid, nodes.wrap);
-      this.installDomObserver(uid, nodes.wrap);
+      this.installDomObserver();
     }
     this.refreshQuizBinding(uid);
 
@@ -691,8 +728,10 @@ export class FQStore implements FQPublicAPI {
     const w = this.getWidget(uid, "rect");
     const dims = this.getDims(uid);
     const arr = w.state.length > 0 ? w.state : this.ensureRect(uid, dims.rows, dims.cols);
-    const rows = clampInt(dims.rows, 1, MAX_RECT_DIM, 1);
-    const cols = clampInt(dims.cols, 1, MAX_RECT_DIM, 1);
+    // Interactive inputs are clamped in ensureRect; revealed exact solutions may
+    // legitimately need a larger prime factor (for example 1/23).
+    const rows = Math.max(1, Math.floor(Number(dims.rows) || 1));
+    const cols = Math.max(1, Math.floor(Number(dims.cols) || 1));
     renderRectSVG(mount, arr, rows, cols);
     this.syncDomState(uid);
     return true;
@@ -832,6 +871,8 @@ export class FQStore implements FQPublicAPI {
   // Single mount implementation — kind determines the DOM id prefix used to find elements.
   mount(uid: string, kind: FQKind, target: string): void {
     uid = String(uid == null ? "" : uid);
+    this.destroyed = false;
+    if (this.mountAttempts[uid]) this.mountAttempts[uid]();
     const p = `fq-${kind}-`;
     let widgetRegistered = false;
     
@@ -842,12 +883,12 @@ export class FQStore implements FQPublicAPI {
         return !!this.nodes(uid).quizInput;
       }
 
-      const wrap  = document.getElementById(p + "wrap-"  + uid);
-      const host  = document.getElementById(p + "host-"  + uid);
-      const mount = document.getElementById(p + "mount-" + uid);
+      const wrap  = this.doc.getElementById(p + "wrap-"  + uid);
+      const host  = this.doc.getElementById(p + "host-"  + uid);
+      const mount = this.doc.getElementById(p + "mount-" + uid);
       
       if (kind === "circle") {
-        const rangeWrap = document.getElementById(p + "range-" + uid);
+        const rangeWrap = this.doc.getElementById(p + "range-" + uid);
         const input = rangeWrap ? rangeWrap.querySelector<HTMLInputElement>('input[type="range"]') : null;
         if (wrap && host && mount && input) {
           this.register(uid, { kind, wrap, host, mount, circleInput: input, target, initialParts: input.value || 1 });
@@ -855,8 +896,8 @@ export class FQStore implements FQPublicAPI {
           return !!this.nodes(uid).quizInput;
         }
       } else {
-        const rowsWrap = document.getElementById(p + "rows-wrap-" + uid);
-        const colsWrap = document.getElementById(p + "cols-wrap-" + uid);
+        const rowsWrap = this.doc.getElementById(p + "rows-wrap-" + uid);
+        const colsWrap = this.doc.getElementById(p + "cols-wrap-" + uid);
         const rowsInput = rowsWrap ? rowsWrap.querySelector<HTMLInputElement>('input[type="range"]') : null;
         const colsInput = colsWrap ? colsWrap.querySelector<HTMLInputElement>('input[type="range"]') : null;
         if (wrap && host && mount && rowsInput && colsInput) {
@@ -884,10 +925,13 @@ export class FQStore implements FQPublicAPI {
         clearTimeout(fallbackTimer);
         fallbackTimer = null;
       }
+      if (this.mountAttempts[uid] === cleanup) delete this.mountAttempts[uid];
     };
+    this.mountAttempts[uid] = cleanup;
     
     if (typeof MutationObserver !== "undefined") {
       observer = new MutationObserver(() => {
+        if (this.destroyed) return cleanup();
         if (tryMount()) {
           debug("mount-observer-success", uid, kind);
           cleanup();
@@ -895,7 +939,7 @@ export class FQStore implements FQPublicAPI {
       });
       
       // Observe document.body (or documentElement) for added nodes
-      const observeTarget = document.body || document.documentElement;
+      const observeTarget = this.doc.body || this.doc.documentElement;
       if (observeTarget) {
         try {
           observer.observe(observeTarget, { childList: true, subtree: true });
@@ -905,15 +949,16 @@ export class FQStore implements FQPublicAPI {
       }
     }
     
-    // Fallback: single retry after 50ms if observer isn't available or elements still not found
+    // Final retry at the end of the bounded mount window.
     fallbackTimer = setTimeout(() => {
+      if (this.destroyed) return cleanup();
       if (tryMount()) {
         debug("mount-fallback-success", uid, kind);
       } else {
         debug("mount-timeout", uid, kind, "elements not found");
       }
       cleanup();
-    }, 250) as unknown as number;
+    }, MOUNT_TIMEOUT_MS) as unknown as number;
   }
 
   // Public API wrappers — delegate to the unified mount.
@@ -940,12 +985,14 @@ export class FQStore implements FQPublicAPI {
   }
 
   destroy(): void {
+    this.destroyed = true;
+    for (const uid in this.mountAttempts) this.mountAttempts[uid]();
+    if (this.domObserver) {
+      try { this.domObserver.disconnect(); } catch (e) {}
+      this.domObserver = null;
+    }
     for (const uid in this.widgets) {
       const nodes = this.widgets[uid].nodes;
-      if (nodes.observer) {
-        try { nodes.observer.disconnect(); } catch (e) {}
-        nodes.observer = null;
-      }
       if (nodes._quizObserver) {
         try { nodes._quizObserver.disconnect(); } catch (e) {}
         nodes._quizObserver = null;

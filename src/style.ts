@@ -16,6 +16,7 @@ export function injectStyleOnce(doc: Document): void {
   --fq-disabled: .45;
   --fq-accent: #6366f1;
 
+  --fq-svg-size: 200px;
   --fq-w: 220px;
   --fq-h: 36px;
   --fq-track-h: 3px;
@@ -47,11 +48,20 @@ export function injectStyleOnce(doc: Document): void {
 }
 
 .fq-mount {
-  display: flex;
-  justify-content: center;
+  display: block;
+  width: var(--fq-w);
+  max-width: 100%;
 }
 
-.fq-mount svg { display: block; }
+.fq-mount svg {
+  display: block;
+  width: var(--fq-svg-size);
+  height: auto;
+  aspect-ratio: 1;
+  max-width: 100%;
+  margin-inline: auto;
+  flex: none;
+}
 
 .fq-clickable {
   cursor: pointer;

@@ -41,8 +41,24 @@ formula:  \liaquiz \htmlClass{lia-math-quiz-slot}{\vphantom{\rule{0pt}{1.5em}}\h
 </div>
 
 <script modify='false'>
-const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountCircle('@0', String.raw`@1`);
+(() => {
+  const uid = '@0';
+  const target = String.raw`@1`;
+  const started = Date.now();
+  const mount = () => {
+    let api = window.__LIA_FRACTION_QUIZ__;
+    if (!api) {
+      try { api = window.top.__LIA_FRACTION_QUIZ__; } catch (_) {}
+    }
+    const host = document.getElementById('fq-circle-mount-' + uid);
+    if (api && host && host.isConnected) {
+      try { api.mountCircle(uid, target, host); } catch (_) {}
+      if (host.querySelector(':scope > svg.fq-svg')) return;
+    }
+    if (Date.now() - started < 5000) setTimeout(mount, 50);
+  };
+  mount();
+})();
 </script>
 
 <span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
@@ -64,8 +80,24 @@ if (_api) _api.mountCircle('@0', String.raw`@1`);
 </div>
 
 <script modify='false'>
-const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountCircle('@0', String.raw`@1`);
+(() => {
+  const uid = '@0';
+  const target = String.raw`@1`;
+  const started = Date.now();
+  const mount = () => {
+    let api = window.__LIA_FRACTION_QUIZ__;
+    if (!api) {
+      try { api = window.top.__LIA_FRACTION_QUIZ__; } catch (_) {}
+    }
+    const host = document.getElementById('fq-circle-mount-' + uid);
+    if (api && host && host.isConnected) {
+      try { api.mountCircle(uid, target, host); } catch (_) {}
+      if (host.querySelector(':scope > svg.fq-svg')) return;
+    }
+    if (Date.now() - started < 5000) setTimeout(mount, 50);
+  };
+  mount();
+})();
 </script>
 
 <span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
@@ -94,8 +126,24 @@ if (_api) _api.mountCircle('@0', String.raw`@1`);
 </div>
 
 <script modify='false'>
-const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountRect('@0', String.raw`@1`);
+(() => {
+  const uid = '@0';
+  const target = String.raw`@1`;
+  const started = Date.now();
+  const mount = () => {
+    let api = window.__LIA_FRACTION_QUIZ__;
+    if (!api) {
+      try { api = window.top.__LIA_FRACTION_QUIZ__; } catch (_) {}
+    }
+    const host = document.getElementById('fq-rect-mount-' + uid);
+    if (api && host && host.isConnected) {
+      try { api.mountRect(uid, target, host); } catch (_) {}
+      if (host.querySelector(':scope > svg.fq-svg')) return;
+    }
+    if (Date.now() - started < 5000) setTimeout(mount, 50);
+  };
+  mount();
+})();
 </script>
 
 <span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
@@ -121,8 +169,24 @@ if (_api) _api.mountRect('@0', String.raw`@1`);
 </div>
 
 <script modify='false'>
-const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountRect('@0', String.raw`@1`);
+(() => {
+  const uid = '@0';
+  const target = String.raw`@1`;
+  const started = Date.now();
+  const mount = () => {
+    let api = window.__LIA_FRACTION_QUIZ__;
+    if (!api) {
+      try { api = window.top.__LIA_FRACTION_QUIZ__; } catch (_) {}
+    }
+    const host = document.getElementById('fq-rect-mount-' + uid);
+    if (api && host && host.isConnected) {
+      try { api.mountRect(uid, target, host); } catch (_) {}
+      if (host.querySelector(':scope > svg.fq-svg')) return;
+    }
+    if (Date.now() - started < 5000) setTimeout(mount, 50);
+  };
+  mount();
+})();
 </script>
 
 <span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
@@ -315,8 +379,24 @@ formula:  \liaquiz \htmlClass{lia-math-quiz-slot}{\vphantom{\rule{0pt}{1.5em}}\h
   </div>
 </div>
 <script modify='false'>
-const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountCircle('@0', String.raw`@1`);
+(() => {
+  const uid = '@0';
+  const target = String.raw`@1`;
+  const started = Date.now();
+  const mount = () => {
+    let api = window.__LIA_FRACTION_QUIZ__;
+    if (!api) {
+      try { api = window.top.__LIA_FRACTION_QUIZ__; } catch (_) {}
+    }
+    const host = document.getElementById('fq-circle-mount-' + uid);
+    if (api && host && host.isConnected) {
+      try { api.mountCircle(uid, target, host); } catch (_) {}
+      if (host.querySelector(':scope > svg.fq-svg')) return;
+    }
+    if (Date.now() - started < 5000) setTimeout(mount, 50);
+  };
+  mount();
+})();
 </script>
 <span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
 
@@ -335,8 +415,24 @@ if (_api) _api.mountCircle('@0', String.raw`@1`);
   </div>
 </div>
 <script modify='false'>
-const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountCircle('@0', String.raw`@1`);
+(() => {
+  const uid = '@0';
+  const target = String.raw`@1`;
+  const started = Date.now();
+  const mount = () => {
+    let api = window.__LIA_FRACTION_QUIZ__;
+    if (!api) {
+      try { api = window.top.__LIA_FRACTION_QUIZ__; } catch (_) {}
+    }
+    const host = document.getElementById('fq-circle-mount-' + uid);
+    if (api && host && host.isConnected) {
+      try { api.mountCircle(uid, target, host); } catch (_) {}
+      if (host.querySelector(':scope > svg.fq-svg')) return;
+    }
+    if (Date.now() - started < 5000) setTimeout(mount, 50);
+  };
+  mount();
+})();
 </script>
 <span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
 
@@ -359,8 +455,24 @@ if (_api) _api.mountCircle('@0', String.raw`@1`);
   </div>
 </div>
 <script modify='false'>
-const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountRect('@0', String.raw`@1`);
+(() => {
+  const uid = '@0';
+  const target = String.raw`@1`;
+  const started = Date.now();
+  const mount = () => {
+    let api = window.__LIA_FRACTION_QUIZ__;
+    if (!api) {
+      try { api = window.top.__LIA_FRACTION_QUIZ__; } catch (_) {}
+    }
+    const host = document.getElementById('fq-rect-mount-' + uid);
+    if (api && host && host.isConnected) {
+      try { api.mountRect(uid, target, host); } catch (_) {}
+      if (host.querySelector(':scope > svg.fq-svg')) return;
+    }
+    if (Date.now() - started < 5000) setTimeout(mount, 50);
+  };
+  mount();
+})();
 </script>
 <span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
 
@@ -382,8 +494,24 @@ if (_api) _api.mountRect('@0', String.raw`@1`);
   </div>
 </div>
 <script modify='false'>
-const _api = window.__LIA_FRACTION_QUIZ__;
-if (_api) _api.mountRect('@0', String.raw`@1`);
+(() => {
+  const uid = '@0';
+  const target = String.raw`@1`;
+  const started = Date.now();
+  const mount = () => {
+    let api = window.__LIA_FRACTION_QUIZ__;
+    if (!api) {
+      try { api = window.top.__LIA_FRACTION_QUIZ__; } catch (_) {}
+    }
+    const host = document.getElementById('fq-rect-mount-' + uid);
+    if (api && host && host.isConnected) {
+      try { api.mountRect(uid, target, host); } catch (_) {}
+      if (host.querySelector(':scope > svg.fq-svg')) return;
+    }
+    if (Date.now() - started < 5000) setTimeout(mount, 50);
+  };
+  mount();
+})();
 </script>
 <span class='fq-native-quiz-source' data-fq-quiz='@0' data-fq-answer='fqok@0' aria-hidden='true'></span>
 
