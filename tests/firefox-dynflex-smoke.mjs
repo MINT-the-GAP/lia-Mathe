@@ -52,10 +52,16 @@ async function buildFixturePayload() {
     if (!match) throw new Error(`Could not extract @${name} from the lia-Mathe template header.`);
     return match[0];
   };
+  const extractInlineMacro = (name) => {
+    const match = headerMatch[1].match(new RegExp(`^@${name}:.*$`, 'm'));
+    if (!match) throw new Error(`Could not extract @${name} from the lia-Mathe template header.`);
+    return match[0];
+  };
   const header = [
     'author: MINT-the-GAP',
     'version: 0.0.2',
     'language: de',
+    extractInlineMacro('Strichliste'),
     extractMacro('circleQuizC'),
     extractMacro('rectQuizC'),
   ].join('\n\n');
@@ -137,6 +143,7 @@ class Bidi {
 function diagnosticExpression() {
   return `(() => {
     const svgs = Array.from(document.querySelectorAll('.fq-mount > svg.fq-svg'));
+    const tallies = Array.from(document.querySelectorAll('.lia-tally[data-lia-tally-count]'));
     return {
       url: location.href,
       title: document.title,
@@ -148,6 +155,19 @@ function diagnosticExpression() {
       ranges: document.querySelectorAll('.fq-range input[type="range"]').length,
       insideSvgs: svgs.filter(svg => !!svg.closest('.dynFlex')).length,
       outsideSvgs: svgs.filter(svg => !svg.closest('.dynFlex')).length,
+      tallies: tallies.map(host => {
+        const svg = host.querySelector(':scope > svg[data-lia-tally-marks]');
+        const rect = svg && svg.getBoundingClientRect();
+        return {
+          count: Number(host.getAttribute('data-lia-tally-count')),
+          marks: svg ? svg.querySelectorAll('[data-lia-tally-mark]').length : 0,
+          inTable: !!host.closest('table'),
+          label: host.getAttribute('aria-label'),
+          width: rect && rect.width,
+          height: rect && rect.height,
+          visible: !!svg && getComputedStyle(svg).display !== 'none',
+        };
+      }),
       svgs: svgs.map(svg => {
         const rect = svg.getBoundingClientRect();
         return {
@@ -180,6 +200,16 @@ function assertHealthy(state, expectedParts = null) {
   assert.equal(state.insideSvgs, 2);
   assert.equal(state.outsideSvgs, 2);
   assert.equal(state.svgs.length, 4);
+  assert.deepEqual(state.tallies.map(tally => tally.count).sort((a, b) => a - b), [8, 17]);
+  assert.deepEqual(state.tallies.map(tally => tally.marks).sort((a, b) => a - b), [8, 17]);
+  assert.equal(state.tallies.filter(tally => tally.inTable).length, 1);
+
+  for (const tally of state.tallies) {
+    assert.equal(tally.label, `Strichliste: ${tally.count}`);
+    assert.ok(tally.width > 0, `tally ${tally.count} has zero width`);
+    assert.ok(tally.height > 0, `tally ${tally.count} has zero height`);
+    assert.equal(tally.visible, true);
+  }
 
   for (const svg of state.svgs) {
     assert.equal(svg.connected, true);
@@ -292,6 +322,41 @@ async function main() {
     await bidi.evaluate(context, `(0,eval)(${JSON.stringify(executableBundle)})`);
 
     const initial = await waitForHealthy(bidi, context);
+    const removedTally = await bidi.evaluate(context, `(() => {
+      const svg = document.querySelector('table .lia-tally > svg[data-lia-tally-marks]');
+      if (!svg) return false;
+      svg.remove();
+      return true;
+    })()`);
+    assert.equal(removedTally, true);
+    await waitForHealthy(bidi, context);
+    const tallyEdgeState = await bidi.evaluateJson(context, `(async() => {
+      const fixture = document.createElement('div');
+      fixture.hidden = true;
+      fixture.innerHTML = ['0', '5', '6', '-1'].map(value =>
+        '<span class="lia-tally" data-lia-tally-count="' + value + '">' + value + '</span>'
+      ).join('');
+      document.body.appendChild(fixture);
+      const deadline = Date.now() + 3000;
+      while (fixture.querySelectorAll('svg[data-lia-tally-marks]').length < 3 && Date.now() < deadline) {
+        await new Promise(resolve => setTimeout(resolve, 25));
+      }
+      const result = Array.from(fixture.querySelectorAll('.lia-tally')).map(host => ({
+        raw: host.getAttribute('data-lia-tally-count'),
+        rendered: host.getAttribute('data-lia-tally-rendered'),
+        marks: host.querySelectorAll('[data-lia-tally-mark]').length,
+        svg: !!host.querySelector('svg[data-lia-tally-marks]'),
+        label: host.getAttribute('aria-label'),
+      }));
+      fixture.remove();
+      return result;
+    })()`, true);
+    assert.deepEqual(tallyEdgeState, [
+      { raw: '0', rendered: '0', marks: 0, svg: true, label: 'Strichliste: 0' },
+      { raw: '5', rendered: '5', marks: 5, svg: true, label: 'Strichliste: 5' },
+      { raw: '6', rendered: '6', marks: 6, svg: true, label: 'Strichliste: 6' },
+      { raw: '-1', rendered: 'invalid:-1', marks: 0, svg: false, label: 'Ungültige Strichliste' },
+    ]);
     const frameState = await bidi.evaluateJson(context, `(async() => {
       const frame = document.createElement('iframe');
       frame.id = 'fq-document-regression-frame';

@@ -38,6 +38,28 @@ export function injectStyleOnce(doc: Document): void {
 
 .fq-widget { display: inline-block; }
 
+.lia-tally {
+  display: inline-block;
+  max-width: 100%;
+  line-height: 1;
+  vertical-align: -0.12em;
+  white-space: nowrap;
+}
+
+.lia-tally > svg {
+  display: block;
+  width: auto;
+  height: 1em;
+  max-width: 100%;
+  overflow: visible;
+  color: inherit;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: square;
+  vector-effect: non-scaling-stroke;
+}
+
 .fq-native-quiz-source {
   display: none !important;
 }

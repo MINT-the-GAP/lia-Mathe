@@ -11,6 +11,12 @@ import: https://raw.githubusercontent.com/MINT-the-GAP/lia-DynFlex/9ef8f05c0eae8
 
 # Firefox DynFlex Regression
 
+Inline tally: @Strichliste(8)
+
+| Party | Votes |
+|:-----:|:------|
+| A     | @Strichliste(17) |
+
 <div data-regression-case="outside-circle">
 
 @circleQuizC(2/5,`<!-- data-solution-button="2" -->`)

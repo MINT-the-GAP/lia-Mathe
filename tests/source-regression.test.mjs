@@ -31,6 +31,23 @@ test('the bundle exposes APIs in root and content contexts', async () => {
   assert.equal((macros.match(/mount(?:Circle|Rect)\(uid, target, host\)/g) || []).length, 8);
 });
 
+test('the tally macro is inline and its renderer repairs dynamic LiaScript content', async () => {
+  const readme = await read('README.md');
+  const source = await read('src/tally.ts');
+  const entry = await read('src/index.ts');
+  const style = await read('src/style.ts');
+
+  assert.match(readme, /^@Strichliste: <span class='lia-tally' data-lia-tally-count='@0'/m);
+  assert.match(source, /const TALLY_SELECTOR = '\.lia-tally\[data-lia-tally-count\]'/);
+  assert.match(source, /for \(let group = 0; group < fullGroups; group\+\+\)/);
+  assert.match(source, /for \(let mark = 0; mark < remainder; mark\+\+\)/);
+  assert.match(source, /attributeFilter: \['data-lia-tally-count'\]/);
+  assert.match(source, /aria-label', `Strichliste: \$\{count\}`/);
+  assert.match(entry, /installTallyRenderer\(ROOT_DOCUMENT\)/);
+  assert.match(entry, /installTallyRenderer\(CONTENT_DOCUMENT\)/);
+  assert.match(style, /\.lia-tally > svg \{[\s\S]*stroke: currentColor;/);
+});
+
 test('deep DOM replacements are observed without unconditional rerenders', async () => {
   const source = await read('src/store.ts');
 
@@ -56,6 +73,8 @@ test('the browser fixture covers C variants inside and outside DynFlex', async (
 
   assert.equal((fixture.match(/@circleQuizC\(/g) || []).length, 2);
   assert.equal((fixture.match(/@rectQuizC\(/g) || []).length, 2);
+  assert.equal((fixture.match(/@Strichliste\(/g) || []).length, 2);
+  assert.match(fixture, /\| A\s+\| @Strichliste\(17\) \|/);
   assert.match(fixture, /<section class="dynFlex"/);
   assert.match(fixture, /import: \.\.\/\.\.\/README\.md/);
 });

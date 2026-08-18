@@ -4,11 +4,13 @@ version:  0.0.2
 language: en
 edit: true
 narrator: US English Female
-comment:  Interactive math quizzes with inputs inside KaTeX formulas plus circle and rectangle fraction visualizations.
+comment:  Interactive math quizzes, fraction visualizations, and inline tally marks.
 
 script:   ./dist/index.js
 
 formula:  \liaquiz \htmlClass{lia-math-quiz-slot}{\vphantom{\rule{0pt}{1.5em}}\hspace{2.2em}}
+
+@Strichliste: <span class='lia-tally' data-lia-tally-count='@0' role='img' aria-label='Strichliste: @0'>@0</span>
 
 @liaQuiz:  @liaQuiz_(@uid,@0)
 
@@ -223,6 +225,32 @@ https://github.com/MINT-the-GAP/lia-Mathe
 
 3. Clone this repository on GitHub
 
+## `@Strichliste`
+
+          --{{0}}--
+Displays a non-negative integer as tally marks. Every complete group contains four
+vertical marks crossed by a fifth mark. Because the macro expands to one inline
+element, it can be used in normal text, table cells, lists, and other LiaScript
+contexts that accept inline content.
+
+``` markdown
+Im Text: @Strichliste(8)
+
+| Partei | Stimmen |
+|:------:|:--------|
+| A      | @Strichliste(17) |
+```
+
+---
+
+Im Text: @Strichliste(8)
+
+| Partei | Stimmen |
+|:------:|:--------|
+| A      | @Strichliste(17) |
+
+Use `@Strichliste(0)` for an empty tally. Values must be non-negative integers.
+
 ## `@circleQuiz`
 
           --{{0}}--
@@ -349,6 +377,8 @@ If you prefer not to use `import:`, copy the following block directly into the h
 script:   https://cdn.jsdelivr.net/gh/MINT-the-GAP/lia-Mathe@main/dist/index.js
 
 formula:  \liaquiz \htmlClass{lia-math-quiz-slot}{\vphantom{\rule{0pt}{1.5em}}\hspace{2.2em}}
+
+@Strichliste: <span class='lia-tally' data-lia-tally-count='@0' role='img' aria-label='Strichliste: @0'>@0</span>
 
 @liaQuiz:  @liaQuiz_(@uid,@0)
 

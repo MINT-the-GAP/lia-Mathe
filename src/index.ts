@@ -2,6 +2,7 @@
 
 import { MATH_QUIZ_KEY } from './constants';
 import { MathQuizBridge } from './mathQuiz';
+import { TallyRenderer } from './tally';
 import { MathQuizPublicAPI } from './types';
 
 import { STORE_KEY, DEBUG_OBSERVER_KEY } from "./constants";
@@ -36,6 +37,32 @@ const ROOT = getRootWindow();
 const CONTENT_WINDOW = window;
 const ROOT_DOCUMENT = getDoc();
 const CONTENT_DOCUMENT = document;
+
+interface TallyRendererRegistry {
+  byDocument: WeakMap<Document, TallyRenderer>;
+  all: Set<TallyRenderer>;
+}
+
+const TALLY_RENDERERS_KEY = '__LIA_TALLY_RENDERERS__';
+let tallyRenderers: TallyRendererRegistry = (ROOT as any)[TALLY_RENDERERS_KEY];
+if (!tallyRenderers || !tallyRenderers.byDocument || !tallyRenderers.all) {
+  tallyRenderers = {
+    byDocument: new WeakMap<Document, TallyRenderer>(),
+    all: new Set<TallyRenderer>(),
+  };
+  (ROOT as any)[TALLY_RENDERERS_KEY] = tallyRenderers;
+}
+
+function installTallyRenderer(doc: Document): void {
+  if (tallyRenderers.byDocument.has(doc)) return;
+  const renderer = new TallyRenderer(doc);
+  tallyRenderers.byDocument.set(doc, renderer);
+  tallyRenderers.all.add(renderer);
+  renderer.install();
+}
+
+installTallyRenderer(ROOT_DOCUMENT);
+if (CONTENT_DOCUMENT !== ROOT_DOCUMENT) installTallyRenderer(CONTENT_DOCUMENT);
 
 let mathQuizBridge: MathQuizBridge = (ROOT as any)[MATH_QUIZ_KEY];
 if (!mathQuizBridge) {
