@@ -1,14 +1,11 @@
 // Entry point: initialises styles and the fraction/math quiz bridges.
 
-import { MATH_QUIZ_KEY } from './constants';
+import { MATH_QUIZ_KEY, STORE_KEY, DEBUG_OBSERVER_KEY, TALLY_RENDERERS_KEY } from './constants';
 import { MathQuizBridge } from './mathQuiz';
 import { TallyRenderer } from './tally';
-import { MathQuizPublicAPI } from './types';
-
-import { STORE_KEY, DEBUG_OBSERVER_KEY } from "./constants";
-import { injectStyleOnce } from "./style";
-import { FQStore, installDebugDomObserver } from "./store";
-import { FQPublicAPI } from "./types";
+import { injectStyleOnce } from './style';
+import { FQStore, installDebugDomObserver } from './store';
+import { FQPublicAPI, MathQuizPublicAPI } from './types';
 
 function getRootWindow(): Window & typeof globalThis {
   let w: any = window;
@@ -43,7 +40,6 @@ interface TallyRendererRegistry {
   all: Set<TallyRenderer>;
 }
 
-const TALLY_RENDERERS_KEY = '__LIA_TALLY_RENDERERS__';
 let tallyRenderers: TallyRendererRegistry = (ROOT as any)[TALLY_RENDERERS_KEY];
 if (!tallyRenderers || !tallyRenderers.byDocument || !tallyRenderers.all) {
   tallyRenderers = {
@@ -121,6 +117,11 @@ const publicAPI: FQPublicAPI = {
     getStore(host?.ownerDocument || CONTENT_DOCUMENT).getAllWidgets(),
   destroy: () => {
     registry.all.forEach(entry => entry.destroy());
+    // Drop the registry too: a destroyed renderer left in byDocument would make a
+    // later installTallyRenderer() no-op, silently disabling tally repair.
+    tallyRenderers.all.forEach(renderer => renderer.destroy());
+    tallyRenderers.all.clear();
+    tallyRenderers.byDocument = new WeakMap<Document, TallyRenderer>();
     const debugObs = (ROOT as any)[DEBUG_OBSERVER_KEY];
     if (debugObs && typeof debugObs.disconnect === 'function') {
       try { debugObs.disconnect(); } catch (e) {}

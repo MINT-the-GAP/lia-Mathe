@@ -1,6 +1,6 @@
 <!--
 author:   MINT-the-GAP, Martin Lommatzsch, Jihad Hyadi
-version:  0.0.2
+version:  0.0.3
 language: en
 edit: true
 narrator: US English Female

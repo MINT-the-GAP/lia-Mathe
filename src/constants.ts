@@ -4,6 +4,7 @@ export const MATH_QUIZ_KEY = '__LIA_MATH_QUIZ_V1__';
 export const STORE_KEY = "__LIA_FRACTION_QUIZ_V5__";
 export const STYLE_ID  = "__LIA_FRACTION_QUIZ_STYLE_V8__";
 export const DEBUG_OBSERVER_KEY = "__LIA_FQ_DEBUG_DOM_OBSERVER_V1__";
+export const TALLY_RENDERERS_KEY = "__LIA_TALLY_RENDERERS__";
 
 export const SVG_SIZE       = 200;
 export const SVG_PADDING    = 6;

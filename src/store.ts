@@ -198,8 +198,9 @@ export class FQStore implements FQPublicAPI {
       : null;
     if (ownScope && ownInput) return { source, input: ownInput, scope: ownScope };
 
-    const view = this.doc.defaultView || window;
-    const following = ((view as any).Node && (view as any).Node.DOCUMENT_POSITION_FOLLOWING) || 4;
+    // Read the constant off the target document's view so cross-frame comparisons work.
+    const view = (this.doc.defaultView as Window & typeof globalThis) || window;
+    const following = (view.Node && view.Node.DOCUMENT_POSITION_FOLLOWING) || 4;
     const boundary = sources[sourceIndex + 1] || null;
     const sourceSlide = source.closest('.lia-slide__content');
     const inputs = Array.from(this.doc.querySelectorAll<HTMLInputElement>(
@@ -255,7 +256,7 @@ export class FQStore implements FQPublicAPI {
     if (input.value === nextValue) return;
 
     input.value = nextValue;
-    const view = input.ownerDocument.defaultView || window;
+    const view = (input.ownerDocument.defaultView as Window & typeof globalThis) || window;
     input.dispatchEvent(new view.Event('input', { bubbles: true }));
     input.dispatchEvent(new view.Event('change', { bubbles: true }));
   }

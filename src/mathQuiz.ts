@@ -57,7 +57,9 @@ function copyStateClasses(source: HTMLInputElement, target: HTMLInputElement): v
 
 export class MathQuizBridge implements MathQuizPublicAPI {
   private readonly doc: Document;
-  private readonly win: Window;
+  // typeof globalThis exposes the DOM constructors (Node, Event, MutationObserver,
+  // ResizeObserver) that this bridge reads off the target document's own view.
+  private readonly win: Window & typeof globalThis;
   private readonly bindings = new Map<string, MathQuizBinding>();
   private readonly containers = new Map<HTMLElement, ContainerRef>();
   private observer: MutationObserver | null = null;
@@ -68,14 +70,14 @@ export class MathQuizBridge implements MathQuizPublicAPI {
 
   constructor(doc: Document) {
     this.doc = doc;
-    this.win = doc.defaultView || window;
+    this.win = (doc.defaultView as Window & typeof globalThis) || window;
   }
 
   install(): void {
     if (this.installed) return;
     this.installed = true;
 
-    const MutationObserverCtor = (this.win as any).MutationObserver as typeof MutationObserver | undefined;
+    const MutationObserverCtor: typeof MutationObserver | undefined = this.win.MutationObserver;
     const target = this.doc.body || this.doc.documentElement;
     if (MutationObserverCtor && target) {
       this.observer = new MutationObserverCtor(() => this.scheduleScan());
@@ -144,7 +146,8 @@ export class MathQuizBridge implements MathQuizPublicAPI {
     inputs: HTMLInputElement[],
     usedInputs: Set<HTMLInputElement>
   ): HTMLInputElement | null {
-    const following = ((this.win as any).Node && (this.win as any).Node.DOCUMENT_POSITION_FOLLOWING) || 4;
+    // Read the constant off the target document's view so cross-frame comparisons work.
+    const following = (this.win.Node && this.win.Node.DOCUMENT_POSITION_FOLLOWING) || 4;
     const sourceSlide = source.closest('.lia-slide__content');
     for (const input of inputs) {
       if (usedInputs.has(input)) continue;
@@ -183,6 +186,10 @@ export class MathQuizBridge implements MathQuizPublicAPI {
         inputs,
         usedInputs
       );
+      // Claim the input as soon as it is selected: a source that bails out below
+      // must not leave its input free for the next source to bind a second time.
+      if (nativeInput) usedInputs.add(nativeInput);
+
       let next: SlotRef | undefined = pendingSlots[0];
       const sourceSlide = node.closest('.lia-slide__content');
       const formulaSlide = next ? next.formula.closest('.lia-slide__content') : null;
@@ -193,7 +200,6 @@ export class MathQuizBridge implements MathQuizPublicAPI {
         next = pendingSlots.shift();
       }
       if (!uid || !nativeInput || !next || !next.formula.parentElement) continue;
-      usedInputs.add(nativeInput);
 
       desired.set(uid, {
         uid,
@@ -316,9 +322,9 @@ export class MathQuizBridge implements MathQuizPublicAPI {
       const button = quiz
         ? quiz.querySelector<HTMLElement>('.lia-quiz__check:not([disabled])')
         : null;
-      if (button && typeof (button as any).click === 'function') {
+      if (button && typeof button.click === 'function') {
         event.preventDefault();
-        (button as any).click();
+        button.click();
       }
     };
     binding.onNativeInput = () => this.syncBinding(binding);
@@ -339,7 +345,7 @@ export class MathQuizBridge implements MathQuizPublicAPI {
     next.nativeInput.addEventListener('input', binding.onNativeInput);
     next.nativeInput.addEventListener('change', binding.onNativeInput);
 
-    const MutationObserverCtor = (this.win as any).MutationObserver as typeof MutationObserver | undefined;
+    const MutationObserverCtor: typeof MutationObserver | undefined = this.win.MutationObserver;
     if (MutationObserverCtor) {
       binding.inputObserver = new MutationObserverCtor(() => this.syncBinding(binding));
       binding.inputObserver.observe(next.nativeInput, {
@@ -356,7 +362,7 @@ export class MathQuizBridge implements MathQuizPublicAPI {
       }
     }
 
-    const ResizeObserverCtor = (this.win as any).ResizeObserver as typeof ResizeObserver | undefined;
+    const ResizeObserverCtor: typeof ResizeObserver | undefined = this.win.ResizeObserver;
     if (ResizeObserverCtor) {
       binding.resizeObserver = new ResizeObserverCtor(() => this.layoutBinding(binding));
       try {
@@ -379,7 +385,7 @@ export class MathQuizBridge implements MathQuizPublicAPI {
     }
 
     binding.nativeInput.value = binding.proxyInput.value;
-    const EventCtor = (this.win as any).Event as typeof Event;
+    const EventCtor = this.win.Event;
     binding.nativeInput.dispatchEvent(new EventCtor(type, {
       bubbles: true,
       cancelable: false
